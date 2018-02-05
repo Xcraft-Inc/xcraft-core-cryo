@@ -9,7 +9,7 @@ cmd['do'] = function* (msg, resp) {
     yield cryo.do (resp);
     resp.events.send (`cryo.do.${msg.id}.finished`);
   } catch (ex) {
-    resp.events.send (`cryo.do.${msg.id}.error`, ex.stack || ex);
+    resp.events.send (`cryo.do.${msg.id}.error`, ex);
   }
 };
 
