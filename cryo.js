@@ -2,14 +2,14 @@
 
 const cmd = {};
 
-cmd['do'] = function* (msg, resp) {
-  const cryo = require ('.');
+cmd['do'] = function*(msg, resp) {
+  const cryo = require('.');
 
   try {
-    yield cryo.do (resp);
-    resp.events.send (`cryo.do.${msg.id}.finished`);
+    yield cryo.do(resp);
+    resp.events.send(`cryo.do.${msg.id}.finished`);
   } catch (ex) {
-    resp.events.send (`cryo.do.${msg.id}.error`, ex);
+    resp.events.send(`cryo.do.${msg.id}.error`, ex);
   }
 };
 
@@ -18,7 +18,7 @@ cmd['do'] = function* (msg, resp) {
  *
  * @returns {Object} The list and definitions of commands.
  */
-exports.xcraftCommands = function () {
+exports.xcraftCommands = function() {
   return {
     handlers: cmd,
     rc: {
