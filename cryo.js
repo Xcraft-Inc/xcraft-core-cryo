@@ -2,18 +2,20 @@
 
 const cmd = {
   create: null,
+  close: null,
   sync: null,
   freeze: null,
   thaw: null,
+  usable: null,
 };
 
 Object.keys(cmd).forEach(c => {
-  cmd[c] = function*(msg, resp) {
+  cmd[c] = function(msg, resp) {
     const cryo = require('.');
 
     try {
-      yield cryo[c](resp, msg);
-      resp.events.send(`cryo.${c}.${msg.id}.finished`);
+      const results = cryo[c](resp, msg);
+      resp.events.send(`cryo.${c}.${msg.id}.finished`, results);
     } catch (ex) {
       resp.events.send(`cryo.${c}.${msg.id}.error`, ex);
     }
@@ -34,28 +36,35 @@ exports.xcraftCommands = function() {
         desc: 'create a new action table',
         options: {
           params: {
-            required: 'table',
             optional: 'options',
           },
         },
       },
-    },
-    sync: {
-      parallel: true,
-      desc: 'sync the store to the disk',
-    },
-    freeze: {
-      parallel: true,
-      desc: 'freeze (persist) an action in the store',
-      options: {
-        required: ['action', 'rules'],
+      close: {
+        parallel: true,
+        desc: 'close the table',
       },
-    },
-    thaw: {
-      parallel: true,
-      desc: 'thaw (extract) the actions from the store',
-      options: {
-        required: ['table'],
+      sync: {
+        parallel: true,
+        desc: 'sync the store to the disk',
+      },
+      freeze: {
+        parallel: true,
+        desc: 'freeze (persist) an action in the store',
+        options: {
+          required: ['action', 'rules'],
+        },
+      },
+      thaw: {
+        parallel: true,
+        desc: 'thaw (extract) the actions from the store',
+        options: {
+          required: ['table'],
+        },
+      },
+      usable: {
+        parallel: true,
+        desc: 'check if Cryo is usable',
       },
     },
   };
