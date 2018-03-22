@@ -52,7 +52,7 @@ exports.xcraftCommands = function() {
         parallel: true,
         desc: 'freeze (persist) an action in the store',
         options: {
-          required: ['action', 'rules'],
+          required: ['db', 'action', 'rules'],
         },
       },
       thaw: {
