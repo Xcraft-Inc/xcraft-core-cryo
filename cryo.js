@@ -1,7 +1,6 @@
 'use strict';
 
 const cmd = {
-  create: null,
   close: null,
   sync: null,
   freeze: null,
@@ -31,15 +30,6 @@ exports.xcraftCommands = function() {
   return {
     handlers: cmd,
     rc: {
-      create: {
-        parallel: true,
-        desc: 'create a new action table',
-        options: {
-          params: {
-            optional: 'options',
-          },
-        },
-      },
       close: {
         parallel: true,
         desc: 'close the table',
