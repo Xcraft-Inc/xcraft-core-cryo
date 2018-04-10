@@ -1,26 +1,26 @@
 'use strict';
 
-const cmd = {
-  close: null,
-  sync: null,
-  freeze: null,
-  thaw: null,
-  frozen: null,
-  usable: null,
-};
+const cryo = require('.');
 
-Object.keys(cmd).forEach(c => {
-  cmd[c] = function(msg, resp) {
-    const cryo = require('.');
+const cmd = {};
 
-    try {
-      const results = cryo[c](resp, msg);
-      resp.events.send(`cryo.${c}.${msg.id}.finished`, results);
-    } catch (ex) {
-      resp.events.send(`cryo.${c}.${msg.id}.error`, ex);
-    }
-  };
-});
+const proto = Object.getPrototypeOf(cryo);
+Object.getOwnPropertyNames(proto)
+  .filter(name => name !== 'constructor' && !name.startsWith('_'))
+  .filter(name => {
+    const desc = Object.getOwnPropertyDescriptor(proto, name);
+    return !!desc && typeof desc.value === 'function';
+  })
+  .forEach(name => {
+    cmd[name] = function(msg, resp) {
+      try {
+        const results = cryo[name](resp, msg);
+        resp.events.send(`cryo.${name}.${msg.id}.finished`, results);
+      } catch (ex) {
+        resp.events.send(`cryo.${name}.${msg.id}.error`, ex);
+      }
+    };
+  });
 
 /**
  * Retrieve the list of available commands.
