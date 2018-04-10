@@ -5,6 +5,7 @@ const cmd = {
   sync: null,
   freeze: null,
   thaw: null,
+  frozen: null,
   usable: null,
 };
 
@@ -49,7 +50,14 @@ exports.xcraftCommands = function() {
         parallel: true,
         desc: 'thaw (extract) the actions from the store',
         options: {
-          required: ['table'],
+          required: ['db, timestamp'],
+        },
+      },
+      frozen: {
+        parallel: true,
+        desc: 'statistics on all actions',
+        options: {
+          required: ['db, timestamp'],
         },
       },
       usable: {
