@@ -35,10 +35,6 @@ exports.xcraftCommands = function() {
         parallel: true,
         desc: 'close the table',
       },
-      sync: {
-        parallel: true,
-        desc: 'sync the store to the disk',
-      },
       freeze: {
         parallel: true,
         desc: 'freeze (persist) an action in the store',
@@ -46,16 +42,20 @@ exports.xcraftCommands = function() {
           required: ['db', 'action', 'rules'],
         },
       },
-      thaw: {
+      frozen: {
         parallel: true,
-        desc: 'thaw (extract) the actions from the store',
+        desc: 'statistics on all actions',
         options: {
           required: ['db, timestamp'],
         },
       },
-      frozen: {
+      sync: {
         parallel: true,
-        desc: 'statistics on all actions',
+        desc: 'sync the store to the disk',
+      },
+      thaw: {
+        parallel: true,
+        desc: 'thaw (extract) the actions from the store',
         options: {
           required: ['db, timestamp'],
         },
