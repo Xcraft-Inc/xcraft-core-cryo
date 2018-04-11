@@ -60,6 +60,10 @@ exports.xcraftCommands = function() {
           required: ['db, timestamp'],
         },
       },
+      timestamp: {
+        parallel: true,
+        desc: 'retrieve a cryo timestamp',
+      },
       usable: {
         parallel: true,
         desc: 'check if Cryo is usable',
