@@ -58,10 +58,6 @@ exports.xcraftCommands = function() {
           },
         },
       },
-      close: {
-        parallel: true,
-        desc: 'close the table',
-      },
       branch: {
         parallel: true,
         desc: 'create a new branch',
@@ -70,6 +66,10 @@ exports.xcraftCommands = function() {
             required: 'db',
           },
         },
+      },
+      close: {
+        parallel: true,
+        desc: 'close the table',
       },
       freeze: {
         parallel: true,
