@@ -49,6 +49,13 @@ exports.xcraftCommands = function() {
   return {
     handlers: cmd,
     rc: {
+      actions: {
+        parallel: true,
+        desc: 'list the actions between two timestamps',
+        options: {
+          required: ['db', 'from', 'to'],
+        },
+      },
       close: {
         parallel: true,
         desc: 'close the table',
