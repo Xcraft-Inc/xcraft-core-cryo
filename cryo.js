@@ -67,6 +67,10 @@ exports.xcraftCommands = function() {
           },
         },
       },
+      branches: {
+        parallel: true,
+        desc: 'list all available branches for all databases',
+      },
       close: {
         parallel: true,
         desc: 'close the table',
