@@ -53,7 +53,9 @@ exports.xcraftCommands = function() {
         parallel: true,
         desc: 'list the actions between two timestamps',
         options: {
-          required: ['db', 'from', 'to'],
+          params: {
+            required: ['db', 'from', 'to'],
+          },
         },
       },
       close: {
@@ -64,21 +66,27 @@ exports.xcraftCommands = function() {
         parallel: true,
         desc: 'create a new branch',
         options: {
-          required: 'db',
+          params: {
+            required: 'db',
+          },
         },
       },
       freeze: {
         parallel: true,
         desc: 'freeze (persist) an action in the store',
         options: {
-          required: ['db', 'action', 'rules'],
+          params: {
+            required: ['db', 'action', 'rules'],
+          },
         },
       },
       frozen: {
         parallel: true,
         desc: 'statistics on all actions',
         options: {
-          required: ['db, timestamp'],
+          params: {
+            required: ['db, timestamp'],
+          },
         },
       },
       sync: {
@@ -89,7 +97,9 @@ exports.xcraftCommands = function() {
         parallel: true,
         desc: 'thaw (extract) the actions from the store',
         options: {
-          required: ['db, timestamp'],
+          params: {
+            required: ['db, timestamp'],
+          },
         },
       },
       timestamp: {
