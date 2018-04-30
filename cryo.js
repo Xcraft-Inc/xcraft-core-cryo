@@ -93,6 +93,15 @@ exports.xcraftCommands = function() {
           },
         },
       },
+      restore: {
+        parallel: true,
+        desc: 'restore an actions store to a particular timestamp',
+        options: {
+          params: {
+            required: ['dbSrc', 'dbDst', 'timestamp'],
+          },
+        },
+      },
       sync: {
         parallel: true,
         desc: 'sync the store to the disk',
