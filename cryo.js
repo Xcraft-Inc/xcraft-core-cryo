@@ -35,7 +35,11 @@ Object.getOwnPropertyNames(proto)
         }
         resp.events.send(`cryo.${name}.${msg.id}.finished`, results);
       } catch (ex) {
-        resp.events.send(`cryo.${name}.${msg.id}.error`, ex);
+        resp.events.send(`cryo.${name}.${msg.id}.error`, {
+          code: ex.code,
+          message: ex.message,
+          stack: ex.stack,
+        });
       }
     };
   });
