@@ -1,21 +1,9 @@
 'use strict';
 
 const cryo = require('.');
+const {isGenerator, isFunction} = require('xcraft-core-utils').js;
 
 const cmd = {};
-
-function isFunction(fn) {
-  return typeof fn === 'function';
-}
-
-function isGenerator(fn) {
-  return (
-    fn &&
-    isFunction(fn) &&
-    fn.constructor &&
-    fn.constructor.name === 'GeneratorFunction'
-  );
-}
 
 const proto = Object.getPrototypeOf(cryo);
 Object.getOwnPropertyNames(proto)
