@@ -27,7 +27,7 @@
     "xcraft-core-host": "^1.0.0"
   },
   "optionalDependencies": {
-    "better-sqlite3": "^4.1.0"
+    "better-sqlite3": "^5.2.1"
   },
   "author": "Mathieu Schroeter",
   "license": "MIT",
