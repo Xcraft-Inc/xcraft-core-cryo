@@ -107,6 +107,13 @@ exports.xcraftCommands = function() {
           },
         },
       },
+      dump: {
+        parallel: true,
+        desc: 'extract actions to a new database',
+        options: {
+          params: {required: ['dbName', 'dbDst', 'timestamp']},
+        },
+      },
       timestamp: {
         parallel: true,
         desc: 'retrieve a cryo timestamp',
