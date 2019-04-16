@@ -82,6 +82,7 @@ exports.xcraftCommands = function() {
         options: {
           params: {
             required: ['db, timestamp'],
+            optional: ['type'],
           },
         },
       },
@@ -104,6 +105,7 @@ exports.xcraftCommands = function() {
         options: {
           params: {
             required: ['db, timestamp'],
+            optional: ['type', 'length', 'offset'],
           },
         },
       },
@@ -111,7 +113,9 @@ exports.xcraftCommands = function() {
         parallel: true,
         desc: 'extract actions to a new database',
         options: {
-          params: {required: ['dbName', 'dbDst', 'timestamp']},
+          params: {
+            required: ['dbName', 'dbDst', 'timestamp'],
+          },
         },
       },
       timestamp: {
