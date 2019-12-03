@@ -24,7 +24,8 @@
     "gigawatts": "^4.0.1",
     "uuid": "^3.1.0",
     "xcraft-core-fs": "^2.0.0",
-    "xcraft-core-host": "^2.0.0"
+    "xcraft-core-host": "^2.0.0",
+    "xcraft-core-utils": "^2.1.1"
   },
   "optionalDependencies": {
     "better-sqlite3": "^5.2.1"
