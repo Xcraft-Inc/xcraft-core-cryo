@@ -67,6 +67,15 @@ exports.xcraftCommands = function() {
         parallel: true,
         desc: 'close the table',
       },
+      loadMiddleware: {
+        parallel: true,
+        desc: 'load and add a new middleware from path',
+        options: {
+          params: {
+            required: ['middlewarePath'],
+          },
+        },
+      },
       freeze: {
         parallel: true,
         desc: 'freeze (persist) an action in the store',
