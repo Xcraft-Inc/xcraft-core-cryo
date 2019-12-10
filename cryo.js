@@ -108,6 +108,15 @@ exports.xcraftCommands = function() {
         parallel: true,
         desc: 'sync the store to the disk',
       },
+      getEntityTypeCount: {
+        parallel: true,
+        desc: 'return goblin types and count',
+        options: {
+          params: {
+            required: ['dbSrc'],
+          },
+        },
+      },
       thaw: {
         parallel: true,
         desc: 'thaw (extract) the actions from the store',
