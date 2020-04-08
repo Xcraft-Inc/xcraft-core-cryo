@@ -7,13 +7,13 @@ const cmd = {};
 
 const proto = Object.getPrototypeOf(cryo);
 Object.getOwnPropertyNames(proto)
-  .filter(name => name !== 'constructor' && !name.startsWith('_'))
-  .filter(name => {
+  .filter((name) => name !== 'constructor' && !name.startsWith('_'))
+  .filter((name) => {
     const desc = Object.getOwnPropertyDescriptor(proto, name);
     return !!desc && isFunction(desc.value);
   })
-  .forEach(name => {
-    cmd[name] = function*(msg, resp) {
+  .forEach((name) => {
+    cmd[name] = function* (msg, resp) {
       try {
         let results;
         if (isGenerator(cryo[name])) {
@@ -37,7 +37,7 @@ Object.getOwnPropertyNames(proto)
  *
  * @returns {Object} The list and definitions of commands.
  */
-exports.xcraftCommands = function() {
+exports.xcraftCommands = function () {
   return {
     handlers: cmd,
     rc: {
