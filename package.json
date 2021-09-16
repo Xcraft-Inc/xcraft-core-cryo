@@ -23,12 +23,10 @@
     "faster-stable-stringify": "^1.0.0",
     "gigawatts": "^4.0.1",
     "uuid": "^8.3.2",
+    "xcraft-core-book": "^1.0.0",
     "xcraft-core-fs": "^2.0.0",
     "xcraft-core-host": "^2.0.0",
     "xcraft-core-utils": "^3.0.0"
-  },
-  "optionalDependencies": {
-    "better-sqlite3": "^7.1.1"
   },
   "author": "Mathieu Schroeter",
   "license": "MIT",
