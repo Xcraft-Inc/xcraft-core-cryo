@@ -1,7 +1,22 @@
 'use strict';
 
+const path = require('path');
+const watt = require('gigawatts');
 const cryo = require('.');
-const {isGenerator, isFunction} = require('xcraft-core-utils').js;
+const {isFunction} = require('xcraft-core-utils').js;
+const xFs = require('xcraft-core-fs');
+const cryoConfig = require('xcraft-core-etc')().load('xcraft-core-cryo');
+
+const endpoints = {};
+const endpointsPath = path.join(__dirname, 'lib/endpoints');
+xFs
+  .ls(endpointsPath, /\.js$/)
+  .map((endpoint) => path.basename(endpoint, '.js'))
+  .filter((endpoint) => cryoConfig.endpoints.includes(endpoint))
+  .forEach((endpoint) => {
+    const Endpoint = require(path.join(endpointsPath, endpoint + '.js'));
+    endpoints[endpoint] = new Endpoint(cryoConfig[endpoint]);
+  });
 
 const cmd = {};
 
@@ -15,12 +30,24 @@ Object.getOwnPropertyNames(proto)
   .forEach((name) => {
     cmd[name] = function* (msg, resp) {
       try {
-        let results;
-        if (isGenerator(cryo[name])) {
-          results = yield cryo[name](resp, msg);
-        } else {
-          results = cryo[name](resp, msg);
+        const value = cryo[name](resp, msg);
+        let results = value && value.then ? yield value : value;
+
+        /* Handle endpoints only when it's done for our own actions store */
+        for (const endpoint in endpoints) {
+          if (endpoints[endpoint][name]) {
+            const value = endpoints[endpoint][name](resp, msg, results);
+            if (value && value.then) {
+              yield value;
+            }
+          }
         }
+
+        /* Special case where the whole freeze results must be ignored on finished */
+        if (name === 'freeze') {
+          results = undefined;
+        }
+
         resp.events.send(`cryo.${name}.${msg.id}.finished`, results);
       } catch (ex) {
         resp.events.send(`cryo.${name}.${msg.id}.error`, {
