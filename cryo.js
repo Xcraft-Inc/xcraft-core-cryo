@@ -1,7 +1,6 @@
 'use strict';
 
 const path = require('path');
-const watt = require('gigawatts');
 const cryo = require('.');
 const {isFunction} = require('xcraft-core-utils').js;
 const xFs = require('xcraft-core-fs');
