@@ -121,6 +121,10 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      getLocation: {
+        parallel: true,
+        desc: 'return the cryo database location',
+      },
       restore: {
         parallel: true,
         desc: 'restore an actions store to a particular timestamp',
