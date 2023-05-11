@@ -135,6 +135,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      migrate: {
+        parallel: true,
+        desc: 'migrate (if necessary) the database',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
       sync: {
         parallel: true,
         desc: 'sync the store to the disk',
