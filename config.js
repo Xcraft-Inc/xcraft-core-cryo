@@ -5,6 +5,12 @@
  */
 module.exports = [
   {
+    type: 'input',
+    name: 'journal',
+    message: 'journal mode for SQLite (journal or WAL)',
+    default: 'WAL',
+  },
+  {
     type: 'list',
     name: 'endpoints',
     message: 'List of endpoints to enabled',
