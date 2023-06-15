@@ -184,6 +184,24 @@ exports.xcraftCommands = function () {
         parallel: true,
         desc: 'check if Cryo is usable',
       },
+      getLastCommonHash: {
+        parallel: true,
+        desc: 'retrieve the last common hash between stores',
+        options: {
+          params: {
+            required: ['db', 'hashes'],
+          },
+        },
+      },
+      actionsSync: {
+        parallel: true,
+        desc: 'sync actions between stores',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
     },
   };
 };
