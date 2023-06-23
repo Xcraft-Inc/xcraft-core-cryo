@@ -17,6 +17,12 @@ module.exports = [
     default: [],
   },
   {
+    type: 'confirm',
+    name: 'enableFTS',
+    message: 'enable full text search',
+    default: false,
+  },
+  {
     type: 'input',
     name: 'googleQueue.topic',
     message: 'Topic to use to publish messages',
