@@ -23,6 +23,12 @@ module.exports = [
     default: false,
   },
   {
+    type: 'confirm',
+    name: 'enableTimetable',
+    message: 'enable timetable',
+    default: false,
+  },
+  {
     type: 'input',
     name: 'googleQueue.topic',
     message: 'Topic to use to publish messages',
