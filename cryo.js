@@ -193,6 +193,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      registerLastActionTriggers: {
+        parallel: true,
+        desc: 'register event topic to trigger',
+        options: {
+          params: {
+            required: ['actorType', 'onInsertTopic', 'onUpdateTopic'],
+          },
+        },
+      },
       actionsSync: {
         parallel: true,
         desc: 'sync actions between stores',
