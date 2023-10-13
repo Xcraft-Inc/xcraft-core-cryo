@@ -44,10 +44,11 @@ Object.getOwnPropertyNames(proto)
         }
 
         /* Special case where the whole freeze results must be ignored
-         * on finished or in other words we just want the hash.
+         * on finished and we just want the hash in the case of 'persist'
+         * type..
          */
         if (name === 'freeze') {
-          results = results?.hash;
+          results = results?.type === 'persist' ? results.hash : undefined;
         }
 
         resp.events.send(`cryo.${name}.${msg.id}.finished`, results);
