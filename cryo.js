@@ -48,7 +48,10 @@ Object.getOwnPropertyNames(proto)
          * type..
          */
         if (name === 'freeze') {
-          results = results?.type === 'persist' ? results.hash : undefined;
+          results =
+            results?.type === 'persist'
+              ? {hash: results.hash, action: results.action}
+              : undefined;
         }
 
         resp.events.send(`cryo.${name}.${msg.id}.finished`, results);
