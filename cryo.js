@@ -204,7 +204,7 @@ exports.xcraftCommands = function () {
         desc: 'retrieve the last hashes for a DB',
         options: {
           params: {
-            required: ['db', 'hashes'],
+            required: ['db'],
           },
         },
       },
