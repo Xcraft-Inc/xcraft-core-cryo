@@ -208,6 +208,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      getLastPersist: {
+        parallel: true,
+        desc: 'get the last persist',
+        options: {
+          params: {
+            required: ['db', 'goblin'],
+          },
+        },
+      },
       registerLastActionTriggers: {
         parallel: true,
         desc: 'register event topic to trigger',
