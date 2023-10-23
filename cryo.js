@@ -199,6 +199,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      getLastHashes: {
+        parallel: true,
+        desc: 'retrieve the last hashes for a DB',
+        options: {
+          params: {
+            required: ['db', 'hashes'],
+          },
+        },
+      },
       registerLastActionTriggers: {
         parallel: true,
         desc: 'register event topic to trigger',
@@ -211,6 +220,15 @@ exports.xcraftCommands = function () {
       actionsSync: {
         parallel: true,
         desc: 'sync actions between stores',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
+      actionsSyncDB: {
+        parallel: true,
+        desc: 'sync actions from one DB between stores',
         options: {
           params: {
             required: ['db'],
