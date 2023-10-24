@@ -226,6 +226,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      hasUUID: {
+        parallel: true,
+        desc: 'return true if the uuid exists',
+        options: {
+          params: {
+            required: ['db', 'uuid'],
+          },
+        },
+      },
       registerLastActionTriggers: {
         parallel: true,
         desc: 'register event topic to trigger',
