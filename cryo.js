@@ -217,6 +217,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      countCreate: {
+        parallel: true,
+        desc: 'count the number of create actions',
+        options: {
+          params: {
+            required: ['db', 'goblin'],
+          },
+        },
+      },
       registerLastActionTriggers: {
         parallel: true,
         desc: 'register event topic to trigger',
