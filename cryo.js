@@ -217,6 +217,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      getLastRevoke: {
+        parallel: true,
+        desc: 'get the last revoke',
+        options: {
+          params: {
+            required: ['db', 'goblin'],
+          },
+        },
+      },
       countCreate: {
         parallel: true,
         desc: 'count the number of create actions',
