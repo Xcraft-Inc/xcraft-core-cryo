@@ -253,7 +253,7 @@ exports.xcraftCommands = function () {
           },
         },
       },
-      actionsSyncDB: {
+      actionsSync2: {
         parallel: true,
         desc: 'sync actions from one DB between stores',
         options: {
