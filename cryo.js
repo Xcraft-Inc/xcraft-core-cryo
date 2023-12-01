@@ -244,21 +244,21 @@ exports.xcraftCommands = function () {
           },
         },
       },
-      actionsSync: {
+      getDataForSync: {
         parallel: true,
-        desc: 'sync actions between stores',
+        desc: 'get staged actions and last commit ID',
         options: {
           params: {
             required: ['db'],
           },
         },
       },
-      actionsSync2: {
+      updateActionsAfterSync: {
         parallel: true,
-        desc: 'sync actions from one DB between stores',
+        desc: 'commit for staged actions',
         options: {
           params: {
-            required: ['db'],
+            required: ['db', 'serverCommitId', 'stagedActions'],
           },
         },
       },
