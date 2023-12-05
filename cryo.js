@@ -49,9 +49,7 @@ Object.getOwnPropertyNames(proto)
          */
         if (name === 'freeze') {
           results =
-            results?.type === 'persist'
-              ? {hash: results.hash, action: results.action}
-              : undefined;
+            results?.type === 'persist' ? {action: results.action} : undefined;
         }
 
         resp.events.send(`cryo.${name}.${msg.id}.finished`, results);
@@ -190,48 +188,12 @@ exports.xcraftCommands = function () {
         parallel: true,
         desc: 'check if Cryo is usable',
       },
-      getLastCommonHash: {
-        parallel: true,
-        desc: 'retrieve the last common hash between stores',
-        options: {
-          params: {
-            required: ['db', 'hashes'],
-          },
-        },
-      },
-      getLastHashes: {
-        parallel: true,
-        desc: 'retrieve the last hashes for a DB',
-        options: {
-          params: {
-            required: ['db'],
-          },
-        },
-      },
-      getLastPersist: {
-        parallel: true,
-        desc: 'get the last persist',
-        options: {
-          params: {
-            required: ['db', 'goblin'],
-          },
-        },
-      },
       countCreate: {
         parallel: true,
         desc: 'count the number of create actions',
         options: {
           params: {
             required: ['db', 'goblin'],
-          },
-        },
-      },
-      hasUUID: {
-        parallel: true,
-        desc: 'return true if the uuid exists',
-        options: {
-          params: {
-            required: ['db', 'uuid'],
           },
         },
       },
