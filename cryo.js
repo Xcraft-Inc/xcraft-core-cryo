@@ -148,6 +148,33 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      immediate: {
+        parallel: true,
+        desc: 'start an immediate transaction',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
+      exclusive: {
+        parallel: true,
+        desc: 'start an exclusive transaction',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
+      commit: {
+        parallel: true,
+        desc: 'commit the transaction',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
       sync: {
         parallel: true,
         desc: 'sync the store to the disk',
@@ -212,6 +239,15 @@ exports.xcraftCommands = function () {
         options: {
           params: {
             required: ['db'],
+          },
+        },
+      },
+      getPersistFromRange: {
+        parallel: true,
+        desc: 'get persist actions from a range of commits',
+        options: {
+          params: {
+            required: ['db', 'fromCommitId', 'toCommitId'],
           },
         },
       },
