@@ -265,7 +265,7 @@ exports.xcraftCommands = function () {
         desc: 'commit for staged actions',
         options: {
           params: {
-            required: ['db', 'serverCommitId', 'stagedActions'],
+            required: ['db', 'serverCommitId', 'rows'],
           },
         },
       },
