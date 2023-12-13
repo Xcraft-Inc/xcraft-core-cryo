@@ -247,7 +247,7 @@ exports.xcraftCommands = function () {
         desc: 'tag actions with the zero commitId',
         options: {
           params: {
-            required: ['db', 'rows'],
+            required: ['db', 'rows', 'zero'],
           },
         },
       },
