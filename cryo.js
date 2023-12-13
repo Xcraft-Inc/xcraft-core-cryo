@@ -242,6 +242,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      prepareDataForSync: {
+        parallel: true,
+        desc: 'tag actions with the zero commitId',
+        options: {
+          params: {
+            required: ['db', 'rows'],
+          },
+        },
+      },
       getPersistFromRange: {
         parallel: true,
         desc: 'get persist actions from a range of commits',
