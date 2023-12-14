@@ -260,6 +260,24 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      getZeroActions: {
+        parallel: true,
+        desc: 'get action ids tagged with the zero commitId',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
+      getActionsByIds: {
+        parallel: true,
+        desc: 'get actions by goblin ids',
+        options: {
+          params: {
+            required: ['db', 'goblinIds'],
+          },
+        },
+      },
       updateActionsAfterSync: {
         parallel: true,
         desc: 'commit for staged actions',
