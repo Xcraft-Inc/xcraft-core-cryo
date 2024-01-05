@@ -251,6 +251,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      hasCommitId: {
+        parallel: true,
+        desc: 'test if a commitId exists',
+        options: {
+          params: {
+            required: ['db', 'commitId'],
+          },
+        },
+      },
       getLastCommitId: {
         parallel: true,
         desc: 'get the last commitId',
