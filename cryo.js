@@ -251,6 +251,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      getLastCommitId: {
+        parallel: true,
+        desc: 'get the last commitId',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
       getPersistFromRange: {
         parallel: true,
         desc: 'get persist actions from a range of commits',
