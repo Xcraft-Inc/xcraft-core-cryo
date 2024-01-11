@@ -1,11 +1,10 @@
 'use strict';
 
 const path = require('path');
-const Cryo = require('.');
 const {isFunction} = require('xcraft-core-utils').js;
 const xFs = require('xcraft-core-fs');
 const cryoConfig = require('xcraft-core-etc')().load('xcraft-core-cryo');
-const cryo = new Cryo(cryoConfig);
+const cryo = require('./lib/index.js');
 
 const endpoints = {};
 const endpointsPath = path.join(__dirname, 'lib/endpoints');
@@ -136,15 +135,6 @@ exports.xcraftCommands = function () {
         options: {
           params: {
             required: ['dbSrc', 'dbDst', 'timestamp'],
-          },
-        },
-      },
-      migrate: {
-        parallel: true,
-        desc: 'migrate (if necessary) the database',
-        options: {
-          params: {
-            required: ['db'],
           },
         },
       },
