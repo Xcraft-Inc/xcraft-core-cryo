@@ -129,6 +129,15 @@ exports.xcraftCommands = function () {
         parallel: true,
         desc: 'return the cryo database location',
       },
+      isEmpty: {
+        parallel: true,
+        desc: 'test if a database is empty',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
       restore: {
         parallel: true,
         desc: 'restore an actions store to a particular timestamp',
