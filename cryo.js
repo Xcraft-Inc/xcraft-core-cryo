@@ -277,6 +277,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      getAllPersist: {
+        parallel: true,
+        desc: 'get all persist actions',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
       getZeroActions: {
         parallel: true,
         desc: 'get action ids tagged with the zero commitId',
