@@ -286,6 +286,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      bootstrapActions: {
+        parallel: true,
+        desc: 'freeze a batch of actions',
+        options: {
+          params: {
+            required: ['db', 'actions'],
+          },
+        },
+      },
       getZeroActions: {
         parallel: true,
         desc: 'get action ids tagged with the zero commitId',
