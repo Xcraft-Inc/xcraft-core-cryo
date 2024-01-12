@@ -46,10 +46,4 @@ module.exports = [
     message: 'fixed part of the ordering key',
     default: '',
   },
-  {
-    type: 'input',
-    name: 'maxBlobSize',
-    message: 'maximum file size accepted by the store',
-    default: 64e6,
-  },
 ];
