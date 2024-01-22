@@ -322,6 +322,15 @@ exports.xcraftCommands = function () {
           },
         },
       },
+      hasGoblin: {
+        parallel: true,
+        desc: 'check if a goblin exists',
+        options: {
+          params: {
+            required: ['db', 'goblin'],
+          },
+        },
+      },
     },
   };
 };
