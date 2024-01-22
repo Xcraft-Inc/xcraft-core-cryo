@@ -214,9 +214,10 @@ exports.xcraftCommands = function () {
         parallel: true,
         desc: 'check if Cryo is usable',
       },
-      countCreate: {
+      countCreateOrPersist: {
         parallel: true,
-        desc: 'count the number of create actions',
+        desc:
+          'count the number of create actions (or 1 if at least one persist)',
         options: {
           params: {
             required: ['db', 'goblin'],
