@@ -8,14 +8,14 @@ persist (and intermediate) actions. The second strategy will you the timestamp
 
 This query selects too old actions. You can change the parameter in order to
 keep only the X latest actions based on the number of 'persist' actions that you
-want. For example, if you want to keep all actions that are be used for the last
-six persist actions, you must set the LIMIT from 4 (see above) to 6.
+want. For example, if you want to keep all actions that are used for the last
+six persist actions, you must set the LIMIT from 4 (see under) to 6.
 
 The timestamp is not used here. This strategy is especially useful in order to
-see what happens and to propose older value in the case or a user wants to
-cancel a change. But it can be a bit problematic if you try to directly use an
-old 'persist' actions because it's possible to have inconsistency between
-different goblins at different time.
+see what happens and to provide older values in the case where a user wants to
+cancel a change. But it can be a bit problematic if you try to directly use old
+'persist' actions because it's possible to have inconsistency between different
+goblins at different time.
 
 ```sql
 -- Select all actions to delete
