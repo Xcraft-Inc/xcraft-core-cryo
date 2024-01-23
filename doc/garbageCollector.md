@@ -46,8 +46,8 @@ LEFT JOIN (
           SELECT rowid
           FROM actions
           WHERE type = 'persist'
-          AND goblin = goblinId
-          AND commitId IS NOT NULL
+            AND goblin = goblinId
+            AND commitId IS NOT NULL
           UNION ALL
           SELECT NULL as rowid
           FROM (
