@@ -22,49 +22,46 @@ goblins at different time.
 SELECT rowid, goblin, type
 FROM actions
 LEFT JOIN (
-  SELECT max, goblinId
+  -- Select only the latest actions to collect
+  SELECT max(rowid) AS max, goblinId
   FROM (
-    -- Select only the latest actions to collect
-    SELECT max(rowid) AS max, goblinId
-    FROM (
-      -- Select all persist actions to collect
-      SELECT rowid, goblin AS goblinId
-      FROM actions
-      WHERE type = 'persist'
-        AND commitId IS NOT NULL
-        AND rowid BETWEEN (
-          -- Select the first action to remove
+    -- Select all persist actions to collect
+    SELECT rowid, goblin AS goblinId
+    FROM actions
+    WHERE type = 'persist'
+      AND commitId IS NOT NULL
+      AND rowid BETWEEN (
+        -- Select the first action to remove
+        SELECT rowid
+        FROM actions
+        WHERE type = 'persist'
+          AND goblin = goblinId
+          AND commitId IS NOT NULL
+        ORDER BY rowid ASC
+        LIMIT 1
+      ) AND (
+        -- Select the X'th older action to remove (we keep at least X actions)
+        SELECT rowid
+        FROM (
           SELECT rowid
           FROM actions
           WHERE type = 'persist'
-            AND goblin = goblinId
-            AND commitId IS NOT NULL
-          ORDER BY rowid ASC
-          LIMIT 1
-        ) AND (
-          -- Select the X'th older action to remove (we keep at least X actions)
-          SELECT rowid
+          AND goblin = goblinId
+          AND commitId IS NOT NULL
+          UNION ALL
+          SELECT NULL as rowid
           FROM (
-            SELECT rowid
-            FROM actions
-            WHERE type = 'persist'
-            AND goblin = goblinId
-            AND commitId IS NOT NULL
-            UNION ALL
-            SELECT NULL as rowid
-            FROM (
-              VALUES (0), (0), (0), (0), (0), (0), (0), (0), (0), (0) -- LIMIT X to 10 (max)
-            )
-            ORDER BY rowid DESC
-            LIMIT 4 -- Use 10 to keep 10 latest actions, etc.
+            VALUES (0), (0), (0), (0), (0), (0), (0), (0), (0), (0) -- LIMIT X to 10 (max)
           )
-          ORDER BY rowid ASC
-          LIMIT 1
+          ORDER BY rowid DESC
+          LIMIT 4 -- Use 10 to keep 10 latest actions, etc.
         )
-      ORDER BY goblin, rowid ASC
-    )
-    GROUP BY goblinId
+        ORDER BY rowid ASC
+        LIMIT 1
+      )
+    ORDER BY goblin, rowid ASC
   )
+  GROUP BY goblinId
 ) AS removeList
 WHERE actions.goblin = removeList.goblinId
   AND actions.rowid < removeList.max
