@@ -1,6 +1,7 @@
 # Support du PRQL
 
-L'idée est d'ajouter le support du PRQL pour simplifier les requêtes dans l'action store.
+L'idée est d'ajouter le support du PRQL pour simplifier les requêtes dans
+l'action store.
 
 Voici un exemple :
 
