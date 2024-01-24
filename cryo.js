@@ -67,7 +67,7 @@ Object.getOwnPropertyNames(proto)
  *
  * @returns {Object} The list and definitions of commands.
  */
-exports.xcraftCommands = function () {
+module.exports.xcraftCommands = function () {
   return {
     handlers: cmd,
     rc: {
@@ -334,4 +334,8 @@ exports.xcraftCommands = function () {
       },
     },
   };
+};
+
+module.exports.dispose = () => {
+  cryo.dispose();
 };
