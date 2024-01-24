@@ -4,6 +4,24 @@ Two strategies will be implemented. The firts one keeps only the X latest
 persist (and intermediate) actions. The second strategy will you the timestamp
 (not implemented).
 
+## Fast queries
+
+These queries needs an optomized query plan. It's necessary to optimize the
+database.
+
+On close:
+
+```sql
+PRAGMA analysis_limit = 1000;
+PRAGMA optimize;
+```
+
+Before the use of the GC:
+
+```sql
+ANALYZE;
+```
+
 ## Keep only the latest actions
 
 This query selects too old actions. You can change the parameter in order to
@@ -28,14 +46,12 @@ LEFT JOIN (
     -- Select all persist actions to collect
     SELECT rowid, goblin AS goblinId
     FROM actions
-    WHERE type = 'persist'
-      AND commitId IS NOT NULL
-      AND rowid BETWEEN (
+    WHERE rowid BETWEEN (
         -- Select the first action to remove
         SELECT rowid
         FROM actions
-        WHERE type = 'persist'
-          AND goblin = goblinId
+        WHERE goblin = goblinId
+          AND type = 'persist'
           AND commitId IS NOT NULL
         ORDER BY rowid ASC
         LIMIT 1
@@ -45,8 +61,8 @@ LEFT JOIN (
         FROM (
           SELECT rowid
           FROM actions
-          WHERE type = 'persist'
-            AND goblin = goblinId
+          WHERE goblin = goblinId
+            AND type = 'persist'
             AND commitId IS NOT NULL
           UNION ALL
           SELECT NULL as rowid
@@ -59,6 +75,8 @@ LEFT JOIN (
         ORDER BY rowid ASC
         LIMIT 1
       )
+      AND type = 'persist'
+      AND commitId IS NOT NULL
     ORDER BY goblin, rowid ASC
   )
   GROUP BY goblinId
