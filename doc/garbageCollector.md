@@ -19,6 +19,7 @@ PRAGMA optimize;
 Before the use of the GC:
 
 ```sql
+PRAGMA analysis_limit = 1000;
 ANALYZE;
 ```
 
@@ -70,7 +71,7 @@ LEFT JOIN (
             VALUES (0), (0), (0), (0), (0), (0), (0), (0), (0), (0) -- LIMIT X to 10 (max)
           )
           ORDER BY rowid DESC
-          LIMIT 4 -- Use 10 to keep 10 latest actions, etc.
+          LIMIT 4 -- Use 10 to keep 10 latest persist actions, etc.
         )
         ORDER BY rowid ASC
         LIMIT 1
