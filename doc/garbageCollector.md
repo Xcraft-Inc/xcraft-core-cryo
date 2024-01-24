@@ -23,7 +23,7 @@ PRAGMA analysis_limit = 1000;
 ANALYZE;
 ```
 
-## Keep only the latest actions
+## Keep only X latest actions
 
 This query selects too old actions. You can change the parameter in order to
 keep only the X latest actions based on the number of 'persist' actions that you
@@ -71,7 +71,7 @@ LEFT JOIN (
             VALUES (0), (0), (0), (0), (0), (0), (0), (0), (0), (0) -- LIMIT X to 10 (max)
           )
           ORDER BY rowid DESC
-          LIMIT 4 -- Use 10 to keep 10 latest persist actions, etc.
+          LIMIT 4 -- PARAMETER -- Use 10 to keep 10 latest persist actions, etc.
         )
         ORDER BY rowid ASC
         LIMIT 1
@@ -84,4 +84,54 @@ LEFT JOIN (
 ) AS removeList
 WHERE actions.goblin = removeList.goblinId
   AND actions.rowid < removeList.max
+```
+
+## Keep only the most recent actions
+
+```sql
+-- Select all actions to delete
+SELECT rowid, goblin, type
+FROM actions
+LEFT JOIN (
+  -- Select only the latest actions to collect
+  SELECT max(rowid) AS max, goblinId
+  FROM (
+    -- Select all persist actions to collect
+    SELECT rowid, goblin AS goblinId
+    FROM actions
+    WHERE rowid BETWEEN (
+        -- Select the first action to remove
+        SELECT rowid
+        FROM actions
+        WHERE goblin = goblinId
+          AND type = 'persist'
+          AND commitId IS NOT NULL
+        ORDER BY rowid ASC
+        LIMIT 1
+      ) AND (
+        -- Select the X'th older action to remove (we keep at least X actions)
+        SELECT rowid
+        FROM (
+          SELECT rowid
+          FROM actions
+          WHERE goblin = goblinId
+            AND type = 'persist'
+            AND commitId IS NOT NULL
+						AND timestamp < '2024-01-24T14:30:00' -- PARAMETER
+          UNION ALL
+          SELECT NULL as rowid
+          ORDER BY rowid DESC
+          LIMIT 2 -- Use 10 to keep 10 latest persist actions, etc.
+        )
+        ORDER BY rowid ASC
+        LIMIT 1
+      )
+      AND type = 'persist'
+      AND commitId IS NOT NULL
+    ORDER BY goblin, rowid ASC
+  )
+  GROUP BY goblinId
+) AS removeList
+WHERE actions.goblin = removeList.goblinId
+  AND actions.rowid <= removeList.max
 ```
