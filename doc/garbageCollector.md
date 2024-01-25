@@ -4,9 +4,15 @@ Two strategies will be implemented. The firts one keeps only the X latest
 persist (and intermediate) actions. The second strategy will you the timestamp
 (not implemented).
 
+Note that the count query is a bit faster that the datetime query. If you want
+to combine both strategies, it's better to begin with the count query (for
+example with a count of 4), and to continue with the datetime query. In this
+case, it will use less time because the datetime query will work on less
+actions.
+
 ## Fast queries
 
-These queries needs an optomized query plan. It's necessary to optimize the
+These queries needs an optimized query plan. It's necessary to optimize the
 database.
 
 On close:
@@ -38,7 +44,7 @@ goblins at different time.
 
 ```sql
 -- Select all actions to delete
-SELECT rowid, goblin
+SELECT rowid
 FROM actions
 LEFT JOIN (
   -- Select only the latest actions to collect
@@ -95,7 +101,7 @@ to `now - one week`.
 
 ```sql
 -- Select all actions to delete
-SELECT rowid, goblin
+SELECT rowid
 FROM actions
 LEFT JOIN (
   -- Select only the latest actions to collect
