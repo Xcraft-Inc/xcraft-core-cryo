@@ -57,7 +57,7 @@ LEFT JOIN (
         ORDER BY rowid ASC
         LIMIT 1
       ) AND (
-        -- Select the X'th older action to remove (we keep at least X actions)
+        -- Select the X'th older action to keep (we keep at least X actions)
         SELECT rowid
         FROM (
           SELECT rowid
@@ -83,10 +83,15 @@ LEFT JOIN (
   GROUP BY goblinId
 ) AS removeList
 WHERE actions.goblin = removeList.goblinId
-  AND actions.rowid < removeList.max
+  AND actions.rowid < removeList.max -- Here max is not in the collectable list
 ```
 
-## Keep only the most recent actions
+## Keep only the latest actions according to a datetime
+
+This query selects too old actions. You can change the parameter in order to
+keep only the latest actions according to a datetime. For example, if you want
+to keep all actions that are used for the last week, you must set the datetime
+to `now - one week`.
 
 ```sql
 -- Select all actions to delete
@@ -109,7 +114,7 @@ LEFT JOIN (
         ORDER BY rowid ASC
         LIMIT 1
       ) AND (
-        -- Select the X'th older action to remove (we keep at least X actions)
+        -- Select the X'th older action to remove (we keep at least the latest actions)
         SELECT rowid
         FROM (
           SELECT rowid
@@ -117,7 +122,7 @@ LEFT JOIN (
           WHERE goblin = goblinId
             AND type = 'persist'
             AND commitId IS NOT NULL
-						AND timestamp < '2024-01-24T14:30:00' -- PARAMETER
+            AND timestamp < '2024-01-24T14:30:00' -- PARAMETER
           UNION ALL
           SELECT NULL as rowid
           ORDER BY rowid DESC
@@ -133,5 +138,5 @@ LEFT JOIN (
   GROUP BY goblinId
 ) AS removeList
 WHERE actions.goblin = removeList.goblinId
-  AND actions.rowid <= removeList.max
+  AND actions.rowid <= removeList.max -- Here max is in the collectable list
 ```
