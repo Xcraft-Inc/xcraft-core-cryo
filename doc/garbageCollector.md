@@ -38,7 +38,7 @@ goblins at different time.
 
 ```sql
 -- Select all actions to delete
-SELECT rowid, goblin, type
+SELECT rowid, goblin
 FROM actions
 LEFT JOIN (
   -- Select only the latest actions to collect
@@ -95,7 +95,7 @@ to `now - one week`.
 
 ```sql
 -- Select all actions to delete
-SELECT rowid, goblin, type
+SELECT rowid, goblin
 FROM actions
 LEFT JOIN (
   -- Select only the latest actions to collect
@@ -126,7 +126,7 @@ LEFT JOIN (
           UNION ALL
           SELECT NULL as rowid
           ORDER BY rowid DESC
-          LIMIT 2 -- Use 10 to keep 10 latest persist actions, etc.
+          LIMIT 2
         )
         ORDER BY rowid ASC
         LIMIT 1
