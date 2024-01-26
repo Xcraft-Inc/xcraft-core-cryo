@@ -341,6 +341,15 @@ module.exports.xcraftCommands = function () {
           },
         },
       },
+      sweepByMaxCount: {
+        parallel: true,
+        desc: 'sweep old actions for a max of persist [1:10]',
+        options: {
+          params: {
+            optional: ['dbs', 'max'],
+          },
+        },
+      },
     },
   };
 };
