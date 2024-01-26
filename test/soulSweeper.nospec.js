@@ -8,4 +8,4 @@ const sqlite = new SQLite(dbLocation);
 sqlite.open(dbName, '', {});
 
 const soulSweeper = new SoulSweeper(sqlite.getHandle(dbName), dbName);
-soulSweeper.sweepForWeeks(30, false);
+soulSweeper.sweepForDays(30, false);
