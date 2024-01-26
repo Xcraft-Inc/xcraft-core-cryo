@@ -332,6 +332,10 @@ module.exports.xcraftCommands = function () {
           },
         },
       },
+      sweep: {
+        parallel: true,
+        desc: 'sweep old actions (default parameters)',
+      },
     },
   };
 };
