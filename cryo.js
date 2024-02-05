@@ -292,7 +292,7 @@ module.exports.xcraftCommands = function () {
         desc: 'freeze a batch of actions',
         options: {
           params: {
-            required: ['db', 'actions'],
+            required: ['db', 'streamId', 'routingKey', 'rename'],
           },
         },
       },
