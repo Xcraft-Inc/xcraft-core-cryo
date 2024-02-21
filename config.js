@@ -23,6 +23,13 @@ module.exports = [
     default: false,
   },
   {
+    type: 'list',
+    name: 'fts.list',
+    message:
+      'List of databases where using FTS (if enableFTS is true); all if empty array',
+    default: [],
+  },
+  {
     type: 'confirm',
     name: 'enableTimetable',
     message: 'enable timetable',
