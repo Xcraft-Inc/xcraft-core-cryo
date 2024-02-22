@@ -214,10 +214,9 @@ module.exports.xcraftCommands = function () {
         parallel: true,
         desc: 'check if Cryo is usable',
       },
-      countCreateOrPersist: {
+      isAlreadyCreated: {
         parallel: true,
-        desc:
-          'count the number of create actions (or 1 if at least one persist)',
+        desc: 'check if this goblin is already created',
         options: {
           params: {
             required: ['db', 'goblin'],
