@@ -1,8 +1,8 @@
 # The Garbage Collector for Cryo store
 
-Two strategies will be implemented. The firts one keeps only the X latest
-persist (and intermediate) actions. The second strategy will you the timestamp
-(not implemented).
+Two strategies are implemented. The first one keeps only the X latest persist
+(and intermediate) actions. The second strategy drop to old actions according to
+a timestamp.
 
 Note that the count query is a bit faster that the datetime query. If you want
 to combine both strategies, it's better to begin with the count query (for
@@ -74,10 +74,19 @@ LEFT JOIN (
           UNION ALL
           SELECT NULL as rowid
           FROM (
-            VALUES (0), (0), (0), (0), (0), (0), (0), (0), (0), (0) -- LIMIT X to 10 (max)
+            VALUES (0), (0), (0), (0), (0), (0), (0), (0), (0), (0),
+                   (0), (0), (0), (0), (0), (0), (0), (0), (0), (0),
+                   (0), (0), (0), (0), (0), (0), (0), (0), (0), (0),
+                   (0), (0), (0), (0), (0), (0), (0), (0), (0), (0),
+                   (0), (0), (0), (0), (0), (0), (0), (0), (0), (0),
+                   (0), (0), (0), (0), (0), (0), (0), (0), (0), (0),
+                   (0), (0), (0), (0), (0), (0), (0), (0), (0), (0),
+                   (0), (0), (0), (0), (0), (0), (0), (0), (0), (0),
+                   (0), (0), (0), (0), (0), (0), (0), (0), (0), (0),
+                   (0), (0), (0), (0), (0), (0), (0), (0), (0), (0) -- LIMIT X to 100 (max)
           )
           ORDER BY rowid DESC
-          LIMIT 4 -- PARAMETER -- Use 10 to keep 10 latest persist actions, etc.
+          LIMIT 4 -- PARAMETER -- Use 100 to keep 100 latest persist actions, etc.
         )
         ORDER BY rowid ASC
         LIMIT 1
