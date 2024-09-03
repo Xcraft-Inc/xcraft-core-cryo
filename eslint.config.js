@@ -16,6 +16,9 @@ module.exports = [
       parser: babelParser,
       parserOptions: {
         requireConfigFile: false, // Évite de devoir spécifier un fichier de configuration Babel
+        babelOptions: {
+          presets: ['@babel/preset-react'],
+        },
         ecmaFeatures: {
           jsx: true,
         },
