@@ -21,12 +21,19 @@
   },
   "dependencies": {
     "faster-stable-stringify": "^1.0.0",
-    "@google-cloud/pubsub": "^2.18.1",
     "gigawatts": "^4.0.1",
     "uuid": "^8.3.2",
     "xcraft-core-book": "^1.0.0",
     "xcraft-core-fs": "^2.0.0",
     "xcraft-core-utils": "^4.0.0"
+  },
+  "peerDependencies": {
+    "@google-cloud/pubsub": "^2.18.1"
+  },
+  "peerDependenciesMeta": {
+    "@google-cloud/pubsub": {
+      "optional": true
+    }
   },
   "author": "Mathieu Schroeter",
   "license": "MIT",
