@@ -174,6 +174,15 @@ module.exports.xcraftCommands = function () {
           },
         },
       },
+      rollback: {
+        parallel: true,
+        desc: 'rollback the transaction',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
       sync: {
         parallel: true,
         desc: 'sync the store to the disk',
