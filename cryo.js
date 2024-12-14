@@ -27,17 +27,17 @@ Object.getOwnPropertyNames(proto)
     return !!desc && isFunction(desc.value);
   })
   .forEach((name) => {
-    cmd[name] = function* (msg, resp) {
+    cmd[name] = async function (msg, resp) {
       try {
         const value = cryo[name](resp, msg);
-        let results = value && value.then ? yield value : value;
+        let results = value && value.then ? await value : value;
 
         /* Handle endpoints only when it's done for our own actions store */
         for (const endpoint in endpoints) {
           if (endpoints[endpoint][name]) {
             const value = endpoints[endpoint][name](resp, msg, results);
             if (value && value.then) {
-              yield value;
+              await value;
             }
           }
         }
