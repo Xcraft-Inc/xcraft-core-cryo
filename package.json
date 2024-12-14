@@ -22,6 +22,7 @@
   "dependencies": {
     "faster-stable-stringify": "^1.0.0",
     "gigawatts": "^4.0.1",
+    "piscina": "^4.8.0",
     "uuid": "^8.3.2",
     "xcraft-core-book": "^1.0.0",
     "xcraft-core-fs": "^2.0.0",

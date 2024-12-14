@@ -36,6 +36,13 @@ module.exports = [
     default: false,
   },
   {
+    type: 'confirm',
+    name: 'enableWorker',
+    message:
+      'enable worher thread for queries dedicated to insert or update (write)',
+    default: false,
+  },
+  {
     type: 'input',
     name: 'googleQueue.topic',
     message: 'Topic to use to publish messages',
