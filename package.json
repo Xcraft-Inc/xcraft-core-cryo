@@ -1,6 +1,6 @@
 {
   "name": "xcraft-core-cryo",
-  "version": "2.16.5",
+  "version": "2.16.6",
   "description": "Xcraft Cryo action-store",
   "main": "lib/index.js",
   "engines": {
