@@ -23,6 +23,12 @@ module.exports = [
     default: false,
   },
   {
+    type: 'confirm',
+    name: 'enableVEC',
+    message: 'enable vector search',
+    default: false,
+  },
+  {
     type: 'list',
     name: 'fts.list',
     message:
