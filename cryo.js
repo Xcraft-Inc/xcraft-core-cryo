@@ -277,6 +277,15 @@ module.exports.xcraftCommands = function () {
           },
         },
       },
+      getSomeCommitIds: {
+        parallel: true,
+        desc: 'get some commitIds last, 10th, 100th, 200th, 1000th',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
       getPersistFromRange: {
         parallel: true,
         desc: 'get persist actions from a range of commits',
