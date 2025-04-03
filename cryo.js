@@ -331,6 +331,15 @@ module.exports.xcraftCommands = function () {
           },
         },
       },
+      hasActions: {
+        parallel: true,
+        desc: 'test if actions exist',
+        options: {
+          params: {
+            required: ['db', 'goblinIds'],
+          },
+        },
+      },
       updateActionsAfterSync: {
         parallel: true,
         desc: 'commit for staged actions',
