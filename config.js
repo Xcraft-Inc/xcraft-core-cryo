@@ -25,7 +25,7 @@ module.exports = [
   {
     type: 'confirm',
     name: 'enableVEC',
-    message: 'enable vector search',
+    message: 'enable vector search (require enableFTS)',
     default: false,
   },
   {
@@ -34,6 +34,19 @@ module.exports = [
     message:
       'List of databases where using FTS (if enableFTS is true); all if empty array',
     default: [],
+  },
+  {
+    type: 'list',
+    name: 'vec.list',
+    message:
+      'List of databases where using VEC (if enableVEC is true); all if empty array',
+    default: [],
+  },
+  {
+    type: 'confirm',
+    name: 'vec.defaultLocale',
+    message: 'used for vectors partionning',
+    default: 'fr',
   },
   {
     type: 'confirm',
