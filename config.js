@@ -49,6 +49,12 @@ module.exports = [
     default: 'fr',
   },
   {
+    type: 'input',
+    name: 'migrations.cleanings',
+    message: 'cleaning rules (array of types to clean) by database name',
+    default: null,
+  },
+  {
     type: 'confirm',
     name: 'enableTimetable',
     message: 'enable timetable',
