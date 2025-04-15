@@ -43,6 +43,12 @@ module.exports = [
     default: [],
   },
   {
+    type: 'list',
+    name: 'vec.dimensions',
+    message: 'Number of dimensions for embeddings',
+    default: '4096',
+  },
+  {
     type: 'confirm',
     name: 'vec.defaultLocale',
     message: 'used for vectors partionning',
