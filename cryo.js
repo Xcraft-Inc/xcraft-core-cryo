@@ -291,7 +291,7 @@ module.exports.xcraftCommands = function () {
         desc: 'get persist actions from a range of commits',
         options: {
           params: {
-            required: ['db', 'fromCommitId', 'toCommitId'],
+            required: ['db', 'id', 'fromCommitId', 'toCommitId', 'toInclusive'],
           },
         },
       },
