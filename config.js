@@ -46,7 +46,7 @@ module.exports = [
     type: 'list',
     name: 'vec.dimensions',
     message: 'Number of dimensions for embeddings',
-    default: '4096',
+    default: 4096,
   },
   {
     type: 'confirm',
