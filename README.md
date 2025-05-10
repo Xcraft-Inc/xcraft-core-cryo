@@ -161,13 +161,13 @@ async cleanupDatabase() {
 
 ## Interactions avec d'autres modules
 
-- [**xcraft-core-book**][1] : Fournit la classe SQLite utilisée par Cryo
-- [**xcraft-core-utils**][2] : Utilisé pour les verrous et autres utilitaires
-- [**xcraft-core-fs**][3] : Gestion des fichiers et répertoires
-- [**xcraft-core-transport**][4] : Streaming des données
-- [**xcraft-core-etc**][5] : Configuration du module
-- [**xcraft-core-goblin**][6] : Les acteurs Goblin utilisent Cryo pour persister leur état
-- [**xcraft-core-host**][7] : Informations sur l'environnement d'exécution
+- **[xcraft-core-book]** : Fournit la classe SQLite utilisée par Cryo
+- **[xcraft-core-utils]** : Utilisé pour les verrous et autres utilitaires
+- **[xcraft-core-fs]** : Gestion des fichiers et répertoires
+- **[xcraft-core-transport]** : Streaming des données
+- **[xcraft-core-etc]** : Configuration du module
+- **[xcraft-core-goblin]** : Les acteurs Goblin utilisent Cryo pour persister leur état
+- **[xcraft-core-host]** : Informations sur l'environnement d'exécution
 - **@google-cloud/pubsub** : Utilisé par l'endpoint GoogleQueue pour la publication de messages
 
 ## Configuration avancée
@@ -243,10 +243,10 @@ Worker thread pour le traitement des embeddings vectoriels :
 
 _Cette documentation a été mise à jour automatiquement._
 
-[1]: https://github.com/Xcraft-Inc/xcraft-core-book
-[2]: https://github.com/Xcraft-Inc/xcraft-core-utils
-[3]: https://github.com/Xcraft-Inc/xcraft-core-fs
-[4]: https://github.com/Xcraft-Inc/xcraft-core-transport
-[5]: https://github.com/Xcraft-Inc/xcraft-core-etc
-[6]: https://github.com/Xcraft-Inc/xcraft-core-goblin
-[7]: https://github.com/Xcraft-Inc/xcraft-core-host
+[xcraft-core-book]: https://github.com/Xcraft-Inc/xcraft-core-book
+[xcraft-core-utils]: https://github.com/Xcraft-Inc/xcraft-core-utils
+[xcraft-core-fs]: https://github.com/Xcraft-Inc/xcraft-core-fs
+[xcraft-core-transport]: https://github.com/Xcraft-Inc/xcraft-core-transport
+[xcraft-core-etc]: https://github.com/Xcraft-Inc/xcraft-core-etc
+[xcraft-core-goblin]: https://github.com/Xcraft-Inc/xcraft-core-goblin
+[xcraft-core-host]: https://github.com/Xcraft-Inc/xcraft-core-host
