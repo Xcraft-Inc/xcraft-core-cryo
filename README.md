@@ -2,9 +2,21 @@
 
 ## Aperçu
 
-Le module `xcraft-core-cryo` est une couche de persistance sophistiquée pour l'écosystème Xcraft, basée sur SQLite. Il implémente un système d'event sourcing qui permet de sauvegarder, récupérer et gérer l'historique des mutations d'état des acteurs Goblin et Elf. Ce module est fondamental pour la persistance des données dans les applications Xcraft, offrant des fonctionnalités avancées comme la recherche plein texte et vectorielle.
+Le module `xcraft-core-cryo` est une couche de persistance sophistiquée pour l'écosystème Xcraft, basée sur SQLite. Il implémente un système d'event sourcing qui permet de sauvegarder, récupérer et gérer l'historique des mutations d'état des acteurs Goblin et Elf. Ce module est fondamental pour la persistance des données dans les applications Xcraft, offrant des fonctionnalités avancées comme la recherche plein texte (FTS) et vectorielle (VEC).
+
+## Sommaire
+
+- [Structure du module](#structure-du-module)
+- [Fonctionnement global](#fonctionnement-global)
+- [Configuration](#configuration)
+- [API des commandes](#api-des-commandes)
+- [Exemples d'utilisation](#exemples-dutilisation)
+- [Interactions avec d'autres modules](#interactions-avec-dautres-modules)
+- [Détails des sources](#détails-des-sources)
 
 ## Structure du module
+
+Le module `xcraft-core-cryo` est organisé autour de plusieurs composants clés :
 
 - **Cryo** : Classe principale qui encapsule les fonctionnalités de persistance et de récupération
 - **SoulSweeper** : Utilitaire pour nettoyer les anciennes actions et optimiser la base de données
@@ -12,7 +24,7 @@ Le module `xcraft-core-cryo` est une couche de persistance sophistiquée pour l'
 - **Endpoints** : Extensions pour connecter Cryo à d'autres systèmes (comme Google Queue)
 - **SQLite-Vec** : Support pour la recherche vectorielle via une extension SQLite
 
-Le module expose une API complète pour la gestion des actions, avec des fonctionnalités de:
+Le module expose une API complète via `xcraftCommands` pour la gestion des actions, avec des fonctionnalités de :
 
 - Persistance (`freeze`)
 - Récupération (`thaw`)
@@ -24,12 +36,14 @@ Le module expose une API complète pour la gestion des actions, avec des fonctio
 
 Cryo fonctionne selon le principe d'event sourcing :
 
-1. Les actions (événements) sont "gelées" (`freeze`) dans la base de données SQLite
-2. Chaque action contient les informations nécessaires pour reconstruire l'état d'un acteur
-3. Les actions peuvent être "dégelées" (`thaw`) pour reconstruire l'état à un moment précis
-4. Le système maintient un historique complet des changements
+1. **Persistance** : Les actions (événements) sont "gelées" (`freeze`) dans la base de données SQLite
+2. **Reconstruction** : Chaque action contient les informations nécessaires pour reconstruire l'état d'un acteur
+3. **Récupération** : Les actions peuvent être "dégelées" (`thaw`) pour reconstruire l'état à un moment précis
+4. **Historique** : Le système maintient un historique complet des changements
 
-Les actions sont stockées avec des métadonnées :
+### Structure des actions
+
+Les actions sont stockées avec des métadonnées complètes :
 
 - `timestamp` : Horodatage de l'action
 - `goblin` : Identifiant de l'acteur concerné
@@ -38,14 +52,101 @@ Les actions sont stockées avec des métadonnées :
 - `type` : Type d'action (create, persist, etc.)
 - `commitId` : Identifiant de commit pour la synchronisation
 
-Le module offre également des fonctionnalités avancées comme :
+### Fonctionnalités avancées
 
-- Recherche plein texte via SQLite FTS5
-- Recherche vectorielle pour les embeddings (avec dimensions configurables)
-- Synchronisation des actions entre différentes instances
-- Nettoyage automatique des anciennes actions via SoulSweeper
-- Transactions et verrous pour garantir la cohérence des données
-- Support pour les worker threads pour le traitement des embeddings
+Le module offre des fonctionnalités sophistiquées :
+
+- **Recherche plein texte** via SQLite FTS5 avec indexation automatique
+- **Recherche vectorielle** pour les embeddings (avec dimensions configurables)
+- **Synchronisation** des actions entre différentes instances
+- **Nettoyage automatique** des anciennes actions via SoulSweeper
+- **Transactions et verrous** pour garantir la cohérence des données
+- **Worker threads** pour le traitement des embeddings en arrière-plan
+- **Endpoints configurables** pour l'intégration avec des systèmes externes
+
+## Configuration
+
+Le module utilise un fichier `config.js` qui définit les options configurables via `xcraft-core-etc` :
+
+### Options principales
+
+| Option                     | Description                                             | Type    | Valeur par défaut |
+| -------------------------- | ------------------------------------------------------- | ------- | ----------------- |
+| `journal`                  | Mode journal pour SQLite (journal ou WAL)              | String  | "WAL"             |
+| `endpoints`                | Liste des endpoints à activer                           | Array   | []                |
+| `enableFTS`                | Activer la recherche plein texte                        | Boolean | false             |
+| `enableVEC`                | Activer la recherche vectorielle (nécessite enableFTS)  | Boolean | false             |
+
+### Configuration FTS (Full Text Search)
+
+| Option      | Description                                    | Type  | Valeur par défaut |
+| ----------- | ---------------------------------------------- | ----- | ----------------- |
+| `fts.list`  | Liste des bases de données où utiliser FTS    | Array | []                |
+
+### Configuration VEC (Vector Search)
+
+| Option              | Description                                     | Type   | Valeur par défaut |
+| ------------------- | ----------------------------------------------- | ------ | ----------------- |
+| `vec.list`          | Liste des bases de données où utiliser VEC     | Array  | []                |
+| `vec.dimensions`    | Nombre de dimensions pour les embeddings       | Number | 4096              |
+| `vec.defaultLocale` | Locale par défaut pour le partitionnement      | String | "fr"              |
+
+### Configuration avancée
+
+| Option                     | Description                                      | Type   | Valeur par défaut |
+| -------------------------- | ------------------------------------------------ | ------ | ----------------- |
+| `migrations.cleanings`     | Règles de nettoyage par nom de base de données  | Object | null              |
+| `enableTimetable`          | Activer la table de temps                       | Boolean| false             |
+| `googleQueue.topic`        | Topic pour publier les messages                 | String | ""                |
+| `googleQueue.authFile`     | Fichier d'authentification pour Google Queue    | String | ""                |
+| `googleQueue.orderingPrefix` | Partie fixe de la clé d'ordonnancement        | String | ""                |
+
+## API des commandes
+
+Le module expose les commandes suivantes via `xcraftCommands` :
+
+### Commandes de base
+
+- **`freeze`** : Persiste une action dans la base de données
+- **`thaw`** : Récupère les actions jusqu'à un timestamp donné
+- **`frozen`** : Obtient des statistiques sur les actions gelées
+- **`isEmpty`** : Teste si une base de données est vide
+- **`usable`** : Vérifie si Cryo est utilisable
+
+### Commandes de gestion
+
+- **`restore`** : Restaure une base de données à un timestamp particulier
+- **`branch`** : Crée une nouvelle branche de la base de données
+- **`branches`** : Liste toutes les branches disponibles
+- **`actions`** : Liste les actions entre deux timestamps
+- **`getEntityTypeCount`** : Retourne les types de goblin et leur nombre
+
+### Commandes de transaction
+
+- **`immediate`** : Démarre une transaction immédiate
+- **`exclusive`** : Démarre une transaction exclusive
+- **`commit`** : Valide la transaction en cours
+- **`rollback`** : Annule la transaction en cours
+
+### Commandes de synchronisation
+
+- **`getDataForSync`** : Obtient les actions en attente et le dernier ID de commit
+- **`prepareDataForSync`** : Marque les actions avec l'ID de commit zéro
+- **`updateActionsAfterSync`** : Met à jour les actions après synchronisation
+- **`hasCommitId`** : Teste si un commitId existe
+- **`getLastCommitId`** : Obtient le dernier commitId
+
+### Commandes de nettoyage
+
+- **`sweep`** : Nettoie les anciennes actions (paramètres par défaut)
+- **`sweepByMaxCount`** : Nettoie en gardant un maximum d'actions par goblin
+
+### Commandes utilitaires
+
+- **`loadMiddleware`** : Charge et ajoute un nouveau middleware
+- **`registerLastActionTriggers`** : Enregistre des topics d'événements à déclencher
+- **`bootstrapActions`** : Gèle un lot d'actions
+- **`hasGoblin`** : Vérifie si un goblin existe
 
 ## Exemples d'utilisation
 
@@ -102,13 +203,14 @@ async thawSomething() {
   const cryo = this.quest.getAPI('cryo');
 
   // Récupérer toutes les actions jusqu'à un timestamp donné
-  await cryo.thaw({
+  const count = await cryo.thaw({
     db: 'myDatabase',
     timestamp: '2023-05-01T12:00:00.000Z'
   });
 
   // Les résultats sont envoyés via des événements
   // resp.events.send('cryo.thawed.myDatabase', rows);
+  console.log(`${count} actions récupérées`);
 }
 ```
 
@@ -128,8 +230,14 @@ async withTransaction() {
     // Effectuer des opérations dans la transaction
     await cryo.freeze({
       db: 'myDatabase',
-      action: {/* ... */},
-      rules: {/* ... */}
+      action: {
+        type: 'persist',
+        payload: {/* ... */}
+      },
+      rules: {
+        goblin: 'myEntity-myEntity@1',
+        mode: 'last'
+      }
     });
 
     // Valider la transaction
@@ -141,6 +249,7 @@ async withTransaction() {
     await cryo.rollback({
       db: 'myDatabase'
     });
+    throw error;
   }
 }
 ```
@@ -154,11 +263,32 @@ async cleanupDatabase() {
 
   // Nettoyer les actions plus anciennes que 30 jours, en gardant 10 actions par acteur
   const changes = await cryo.sweep({
-    dbs: ['myDatabase'],
-    days: 30,
-    max: 10
+    dbs: ['myDatabase']
   });
   console.log(changes); // Nombre d'actions supprimées par base de données
+}
+```
+
+### Gestion des branches
+
+```javascript
+// Dans une méthode d'un acteur Elf
+async manageBranches() {
+  const cryo = this.quest.getAPI('cryo');
+
+  // Créer une nouvelle branche
+  await cryo.branch({
+    db: 'myDatabase'
+  });
+
+  // Lister toutes les branches disponibles
+  const branches = await cryo.branches();
+  console.log(branches);
+  // {
+  //   myDatabase: {
+  //     branches: ['20231201120000', '20231202150000']
+  //   }
+  // }
 }
 ```
 
@@ -173,118 +303,99 @@ async cleanupDatabase() {
 - **[xcraft-core-host]** : Informations sur l'environnement d'exécution
 - **@google-cloud/pubsub** : Utilisé par l'endpoint GoogleQueue pour la publication de messages
 
-## Configuration avancée
-
-| Option                     | Description                                             | Type    | Valeur par défaut |
-| -------------------------- | ------------------------------------------------------- | ------- | ----------------- |
-| journal                    | Mode journal pour SQLite                                | String  | "WAL"             |
-| endpoints                  | Liste des endpoints à activer                           | Array   | []                |
-| enableFTS                  | Activer la recherche plein texte                        | Boolean | false             |
-| enableVEC                  | Activer la recherche vectorielle (nécessite enableFTS)  | Boolean | false             |
-| fts.list                   | Liste des bases de données où utiliser FTS              | Array   | []                |
-| vec.list                   | Liste des bases de données où utiliser VEC              | Array   | []                |
-| vec.dimensions             | Nombre de dimensions pour les embeddings                | Number  | 4096              |
-| vec.defaultLocale          | Locale par défaut pour le partitionnement des vecteurs  | String  | "fr"              |
-| migrations.cleanings       | Règles de nettoyage par nom de base de données          | Object  | null              |
-| enableTimetable            | Activer la table de temps pour des requêtes temporelles | Boolean | false             |
-| googleQueue.topic          | Topic à utiliser pour publier les messages              | String  | ""                |
-| googleQueue.authFile       | Fichier d'authentification pour Google Queue            | String  | ""                |
-| googleQueue.orderingPrefix | Partie fixe de la clé d'ordonnancement                  | String  | ""                |
-
-### Variables d'environnement
-
-| Variable                       | Description                                      | Exemple              | Valeur par défaut                                 |
-| ------------------------------ | ------------------------------------------------ | -------------------- | ------------------------------------------------- |
-| GOOGLE_APPLICATION_CREDENTIALS | Chemin vers le fichier d'authentification Google | "/path/to/auth.json" | Défini dynamiquement si googleQueue est configuré |
-
 ## Détails des sources
 
-### `cryo.js`
+### `cryo.js` - Classe principale
 
-Classe principale qui implémente toutes les fonctionnalités de Cryo. Elle gère :
+La classe `Cryo` hérite de `SQLite` et implémente toutes les fonctionnalités de persistance :
 
-- La connexion à SQLite et la définition du schéma de base de données
-- Les requêtes SQL pour les différentes opérations (freeze, thaw, etc.)
-- Les middlewares pour transformer les données
-- Les transactions et verrous pour garantir la cohérence
-- Les triggers pour les notifications d'événements
-- La gestion des indices et des optimisations
+#### Propriétés importantes
 
-La classe expose de nombreuses méthodes comme `freeze`, `thaw`, `frozen`, `restore`, etc., qui sont exposées via l'API Xcraft. Elle gère également les migrations de schéma lors des mises à jour.
+- `#soulSweeper` : Instances de SoulSweeper par base de données
+- `#worker` : Map des worker threads pour les embeddings vectoriels
+- `_middleware` : Fonction middleware pour transformer les données
+- `_lastActionTriggers` : Triggers pour les notifications d'événements
 
-#### Méthodes publiques
+#### Méthodes de persistance
 
-- **`freeze(resp, msg)`** - Persiste une action dans la base de données. Prend un objet action et des règles de persistance.
-- **`thaw(resp, msg)`** - Récupère les actions de la base de données jusqu'à un timestamp donné.
-- **`frozen(resp, msg)`** - Obtient des statistiques sur les actions gelées.
-- **`restore(resp, msg)`** - Restaure une base de données à un timestamp particulier.
-- **`branch(resp, msg)`** - Crée une nouvelle branche de la base de données.
-- **`branches(resp)`** - Liste toutes les branches disponibles pour toutes les bases de données.
-- **`actions(resp, msg)`** - Liste les actions entre deux timestamps.
-- **`getEntityTypeCount(resp, msg)`** - Retourne les types de goblin et leur nombre.
-- **`sweep(resp, msg)`** - Nettoie les anciennes actions selon les paramètres par défaut.
-- **`sweepByMaxCount(resp, msg)`** - Nettoie les anciennes actions en gardant un maximum d'actions par goblin.
-- **`immediate(resp, msg)`** - Démarre une transaction immédiate.
-- **`exclusive(resp, msg)`** - Démarre une transaction exclusive.
-- **`commit(resp, msg)`** - Valide la transaction en cours.
-- **`rollback(resp, msg)`** - Annule la transaction en cours.
-- **`registerLastActionTriggers(resp, msg)`** - Enregistre des topics d'événements à déclencher.
-- **`getDataForSync(resp, msg)`** - Obtient les actions en attente et le dernier ID de commit.
-- **`bootstrapActions(resp, msg, next)`** - Gèle un lot d'actions.
+- **`freeze(resp, msg)`** : Persiste une action avec gestion des règles et des types
+- **`thaw(resp, msg)`** : Récupère les actions avec support de pagination
+- **`frozen(resp, msg)`** : Statistiques sur les actions gelées
 
-### `soulSweeper.js`
+#### Méthodes de transaction
 
-Utilitaire spécialisé pour nettoyer les anciennes actions et optimiser la base de données :
+- **`immediate(resp, msg)`** : Transaction immédiate avec verrous
+- **`exclusive(resp, msg)`** : Transaction exclusive
+- **`commit(resp, msg)`** : Validation avec envoi des notifications en attente
+- **`rollback(resp, msg)`** : Annulation de transaction
 
-- `sweepByCount` : Garde un nombre spécifique d'actions par acteur (entre 1 et 100)
-- `sweepByDatetime` : Supprime les actions antérieures à une date spécifique
-- `sweepForDays` : Stratégie combinée pour garder un historique récent plus détaillé
+#### Gestion des bases de données
 
-Le SoulSweeper utilise des requêtes SQL optimisées pour identifier et supprimer les actions obsolètes tout en préservant l'intégrité des données. Il inclut également des fonctionnalités pour analyser et optimiser la base de données après le nettoyage.
+- **`_open(dbName, resp)`** : Ouverture avec migration automatique du schéma
+- **`branch(resp, msg)`** : Création de branches avec horodatage
+- **`restore(resp, msg)`** : Restauration à un point dans le temps
 
-#### Méthodes publiques
+### `soulSweeper.js` - Nettoyage des données
 
-- **`sweepByCount(count = 4, dryrun = true)`** - Nettoie en gardant un nombre spécifique d'actions persist par goblin.
-- **`sweepByDatetime(datetime = this.#sqlite.timestamp(), dryrun = true)`** - Nettoie les actions antérieures à une date donnée.
-- **`sweepForDays(days = 30, max = 10, dryrun = true)`** - Stratégie combinée pour garder un historique récent plus détaillé.
+Utilitaire spécialisé pour l'optimisation des bases de données :
 
-### `streamSQL.js`
+#### Stratégies de nettoyage
 
-Classes pour la lecture/écriture de flux de données SQL :
+- **`sweepByCount(count, dryrun)`** : Garde un nombre spécifique d'actions persist par goblin
+- **`sweepByDatetime(datetime, dryrun)`** : Supprime les actions antérieures à une date
+- **`sweepForDays(days, max, dryrun)`** : Stratégie combinée pour un historique récent détaillé
 
-- `ReadableSQL` : Stream lisible pour extraire des données de SQLite par lots
-- `WritableSQL` : Stream inscriptible pour insérer des données dans SQLite avec gestion des transactions
+#### Optimisations
 
-Ces classes permettent de traiter efficacement de grandes quantités de données sans surcharger la mémoire, en utilisant le système de streaming de Node.js.
+- Requêtes SQL optimisées avec CTE (Common Table Expressions)
+- Support du mode dry-run pour prévisualiser les suppressions
+- VACUUM automatique après suppressions importantes
+- Analyse et optimisation des indices
 
-### `endpoints/googleQueue.js`
+### `streamSQL.js` - Streaming de données
 
-Endpoint pour publier des actions dans Google Cloud Pub/Sub :
+Classes pour le traitement efficace de grandes quantités de données :
 
-- Publie les actions gelées dans un topic Google Cloud
-- Ajoute des métadonnées comme l'horodatage et l'identifiant de l'acteur
-- Gère l'authentification via un fichier de credentials
-- Supporte l'ordonnancement des messages pour garantir leur traitement séquentiel
+#### `ReadableSQL`
 
-### `sqlite-vec/loader.js`
+- Stream lisible pour extraire des données SQLite par lots
+- Gestion de l'itération avec `#step` configurable
+- Support des opérations asynchrones avec `#wait`
 
-Chargeur pour l'extension SQLite de recherche vectorielle :
+#### `WritableSQL`
 
-- Détecte la plateforme et l'architecture du système
-- Charge l'extension appropriée pour la recherche vectorielle
-- Supporte différentes plateformes (Linux, macOS, Windows) et architectures (x86_64, aarch64)
-- Gère les erreurs de chargement avec des messages explicites
+- Stream inscriptible pour insertion en lots
+- Gestion automatique des transactions par blocs
+- Optimisation des performances avec des commits périodiques
 
-### `sqlite-vec/worker.js`
+### `endpoints/googleQueue.js` - Intégration Google Cloud
 
-Worker thread pour le traitement des embeddings vectoriels :
+Endpoint pour publier les actions dans Google Cloud Pub/Sub :
 
-- Exécute les opérations d'embedding dans un thread séparé
-- Gère l'insertion et la mise à jour des vecteurs dans la table `embeddings`
-- Utilise la fonction `vec_f32` pour convertir les données binaires en vecteurs
-- Supporte le partitionnement par locale pour améliorer les performances
+- **Configuration** : Authentification via fichier de credentials
+- **Publication** : Messages avec métadonnées et ordonnancement
+- **Attributs** : Horodatage, goblin, version pour le filtrage
+- **Gestion d'erreurs** : Logging des échecs de publication
 
-La table `embeddings` est structurée comme suit :
+### `sqlite-vec/` - Recherche vectorielle
+
+#### `loader.js` - Chargement d'extension
+
+- Détection automatique de la plateforme (Linux, macOS, Windows)
+- Support multi-architecture (x86_64, aarch64)
+- Gestion des erreurs avec messages explicites
+- Chargement dynamique de l'extension SQLite
+
+#### `worker.js` - Traitement des embeddings
+
+Worker thread pour les opérations vectorielles :
+
+- **Isolation** : Traitement dans un thread séparé
+- **Embedding** : Conversion et insertion des vecteurs
+- **Partitionnement** : Support des locales pour les performances
+- **Gestion du cycle de vie** : Nettoyage automatique des ressources
+
+La table `embeddings` utilise la structure suivante :
 
 ```sql
 CREATE VIRTUAL TABLE embeddings USING vec0(
@@ -297,9 +408,11 @@ CREATE VIRTUAL TABLE embeddings USING vec0(
 );
 ```
 
-Cette structure permet des recherches vectorielles efficaces avec partitionnement par locale pour améliorer les performances.
+Cette structure permet des recherches vectorielles efficaces avec partitionnement par locale et métrique de distance cosinus pour la similarité sémantique.
 
-_Cette documentation a été mise à jour automatiquement._
+---
+
+_Cette documentation a été générée automatiquement à partir des sources du module xcraft-core-cryo._
 
 [xcraft-core-book]: https://github.com/Xcraft-Inc/xcraft-core-book
 [xcraft-core-utils]: https://github.com/Xcraft-Inc/xcraft-core-utils
