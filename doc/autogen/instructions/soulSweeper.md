@@ -35,11 +35,14 @@ Le README généré doit être en **Markdown** et suivre cette structure :
 
 ## Fonctionnement
 
-(Explication détaillée du fonctionnement en respectant les objectifs (garde les détails pour les requêtes SQL dans le chapitre "Anatomie de la requête SQL"))
+(Explications détaillées du fonctionnement en respectant les objectifs)
+(Garde les détails pour les requêtes SQL dans le chapitre "Anatomie de la requête SQL")
 
 ## Anatomie de la requête SQL
 
-(Explication détaillée pour la requête SQL en montrant le code SQL tout en expliquant les parties)
+(Explications détaillées pour la requête SQL en montrant le code SQL tout en expliquant les parties)
+(Prend en compte dans tes explications le fait qu'entre chaque actions "persist" il y a d'autres actions et que les actions intermédiaire sont préservées)
+(Ajoute des tableaux d'exemples simplifiés de résultats pour que l'on comprenne bien ce qui se passe)
 ```
 
 ## Points d'attention particuliers

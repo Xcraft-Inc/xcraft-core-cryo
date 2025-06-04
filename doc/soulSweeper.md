@@ -229,6 +229,8 @@ Cette sous-requête utilise une technique sophistiquée de regroupement par `gob
 
 La logique de groupement `GROUP BY goblinId` avec `max(rowid)` garantit qu'une seule valeur de référence est calculée par goblin, évitant les ambiguïtés dans la sélection des actions à supprimer.
 
+Le principe fondamental est de déterminer, pour chaque goblin, quelle est la dernière action persist qui peut être supprimée tout en conservant les N actions persist les plus récentes. Cette approche garantit que toutes les actions intermédiaires entre les actions persist supprimées sont également supprimées, maintenant ainsi la cohérence de l'historique.
+
 ### Mécanisme de protection par valeurs nulles
 
 L'une des innovations les plus remarquables de cette requête réside dans l'utilisation de 100 valeurs nulles générées artificiellement via une clause `VALUES`. Cette technique garantit qu'aucun goblin ne perd plus d'actions que le seuil autorisé, même dans les cas où il possède moins d'actions persist que la limite de conservation.
@@ -244,11 +246,19 @@ FROM (
 
 Les valeurs nulles sont injectées dans la sous-requête de sélection des actions à conserver, créant un "coussin de sécurité" qui empêche les suppressions excessives. Lorsque la requête tente de sélectionner la N-ième action en partant de la fin, les valeurs nulles comblent automatiquement les positions manquantes.
 
-Cette approche élégante évite les conditions complexes et les vérifications de comptage, laissant le moteur SQL gérer naturellement les cas limites via le tri et la limitation des résultats.
+Cette approche élégante évite les conditions complexes et les vérifications de comptage, laissant le moteur SQL gérer naturellement les cas limites via le tri et la limitation des résultats. Le mécanisme fonctionne en exploitant le fait que les valeurs NULL sont triées en dernier dans un tri ascendant et en premier dans un tri descendant.
+
+| Scénario               | Actions persist existantes | Paramètre count | Valeurs nulles ajoutées | Résultat             |
+| ---------------------- | -------------------------- | --------------- | ----------------------- | -------------------- |
+| Goblin avec 15 actions | 15                         | 10              | 100                     | 5 actions supprimées |
+| Goblin avec 5 actions  | 5                          | 10              | 100                     | 0 action supprimée   |
+| Goblin avec 2 actions  | 2                          | 10              | 100                     | 0 action supprimée   |
 
 ### Gestion des bornes de suppression
 
-La détermination des bornes de suppression utilise une logique de fenêtrage sophistiquée. La borne inférieure est calculée en sélectionnant la première action persist du goblin avec un `commitId` valide :
+La détermination des bornes de suppression utilise une logique de fenêtrage sophistiquée qui définit précisément la plage d'actions candidates à la suppression pour chaque goblin.
+
+La borne inférieure est calculée en sélectionnant la première action persist du goblin avec un `commitId` valide :
 
 ```sql
 SELECT rowid
@@ -259,6 +269,8 @@ WHERE goblin = goblinId
 ORDER BY rowid ASC
 LIMIT 1
 ```
+
+Cette borne inférieure représente le point de départ théorique de la suppression. Toute action persist antérieure à cette borne est automatiquement exclue de la suppression, garantissant que l'historique le plus ancien est préservé.
 
 La borne supérieure correspond à la N-ième action persist en partant de la fin, calculée via une sous-requête qui combine les actions réelles avec les valeurs nulles de protection :
 
@@ -284,13 +296,24 @@ Cette approche garantit que même si un goblin possède exactement N actions per
 
 Le double tri (`ORDER BY rowid DESC` puis `ORDER BY rowid ASC`) permet de sélectionner précisément la N-ième action en partant de la fin, puis de récupérer la plus ancienne de cette sélection comme borne de référence.
 
+| Étape                  | Actions rowid                       | Après ORDER BY DESC LIMIT 10 | Après ORDER BY ASC LIMIT 1 |
+| ---------------------- | ----------------------------------- | ---------------------------- | -------------------------- |
+| Goblin avec 15 actions | 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 | 15,14,13,12,11,10,9,8,7,6    | 6 (borne supérieure)       |
+| Actions supprimables   | 1,2,3,4,5                           | -                            | Actions 1 à 5 supprimées   |
+
+La plage définie par `BETWEEN borne_inférieure AND borne_supérieure` contient toutes les actions persist candidates à la suppression. Cependant, seules les actions dont le `rowid` est strictement inférieur à la borne supérieure seront effectivement supprimées, préservant ainsi les N actions persist les plus récentes.
+
 ### Jointure et sélection finale
 
-La jointure externe finale utilise deux conditions critiques : l'égalité des identifiants de goblin et la comparaison des `rowid`. La condition `actions.rowid < removeList.max` (pour le nettoyage par nombre) ou `actions.rowid <= removeList.max` (pour le nettoyage par date) détermine précisément quelles actions sont incluses dans la suppression.
+La jointure externe finale utilise deux conditions critiques qui déterminent précisément quelles actions sont incluses dans la suppression. La première condition `actions.goblin = removeList.goblinId` établit la correspondance entre les actions et les goblins concernés par le nettoyage.
+
+La seconde condition `actions.rowid < removeList.max` (pour le nettoyage par nombre) ou `actions.rowid <= removeList.max` (pour le nettoyage par date) détermine précisément quelles actions sont incluses dans la suppression.
 
 Cette différence subtile entre `<` et `<=` reflète la philosophie de chaque stratégie : le nettoyage par nombre exclut l'action de référence de la suppression, tandis que le nettoyage par date l'inclut, permettant une granularité différente dans la gestion de l'historique.
 
-La jointure `LEFT JOIN` garantit que tous les goblins sont considérés, même ceux qui n'ont pas d'actions dans la plage de suppression, évitant les suppressions accidentelles par omission.
+La jointure `LEFT JOIN` garantit que tous les goblins sont considérés, même ceux qui n'ont pas d'actions dans la plage de suppression, évitant les suppressions accidentelles par omission. Les goblins sans actions candidates à la suppression apparaîtront avec des valeurs NULL dans `removeList`, et la condition de jointure les exclura naturellement de la suppression.
+
+Le mécanisme de sélection finale prend en compte toutes les actions intermédiaires entre les actions persist supprimées. Cela signifie que si une action persist avec `rowid = 100` est supprimée, toutes les actions avec des `rowid` inférieurs pour le même goblin seront également supprimées, maintenant ainsi la cohérence temporelle de l'historique.
 
 ### Adaptation dynamique pour la synchronisation
 
@@ -303,9 +326,16 @@ const patch = (query) =>
   withCommits ? query : query.replaceAll("AND commitId IS NOT NULL", "");
 ```
 
-Le patching s'applique à toutes les occurrences de la condition dans les requêtes complexes, garantissant une cohérence totale entre les différentes sous-requêtes et évitant les incohérences de comportement.
+Le patching s'applique à toutes les occurrences de la condition dans les requêtes complexes, garantissant une cohérence totale entre les différentes sous-requêtes et évitant les incohérences de comportement. Cette approche permet au même code SQL de fonctionner dans les deux contextes sans duplication de logique.
+
+Dans un environnement sans synchronisation, toutes les actions persist sont candidates au nettoyage, indépendamment de leur statut de synchronisation. Dans un environnement synchronisé, seules les actions avec un `commitId` valide (donc déjà synchronisées) peuvent être supprimées, préservant les actions en cours de synchronisation ou en attente.
 
 La requête de nettoyage par date suit une structure similaire mais adapte les critères de sélection avec l'ajout de la condition temporelle `AND timestamp < $datetime` et l'utilisation de seulement 2 valeurs nulles de protection au lieu de 100, reflétant la stratégie de conservation minimale de 2 actions persist par goblin.
+
+| Mode                 | Condition appliquée        | Actions concernées               |
+| -------------------- | -------------------------- | -------------------------------- |
+| Avec synchronisation | `AND commitId IS NOT NULL` | Seules les actions synchronisées |
+| Sans synchronisation | Condition supprimée        | Toutes les actions persist       |
 
 Le SoulSweeper constitue ainsi un composant essentiel pour maintenir les performances et la taille des bases de données Cryo dans des environnements de production à long terme, tout en préservant l'intégrité des données et la cohérence de l'historique des actions à travers des stratégies de nettoyage sophistiquées et adaptatives.
 
