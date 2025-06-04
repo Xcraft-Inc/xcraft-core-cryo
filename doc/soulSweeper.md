@@ -315,6 +315,20 @@ La jointure `LEFT JOIN` garantit que tous les goblins sont considérés, même c
 
 Le mécanisme de sélection finale prend en compte toutes les actions intermédiaires entre les actions persist supprimées. Cela signifie que si une action persist avec `rowid = 100` est supprimée, toutes les actions avec des `rowid` inférieurs pour le même goblin seront également supprimées, maintenant ainsi la cohérence temporelle de l'historique.
 
+Pour illustrer ce comportement, considérons un goblin avec les actions suivantes :
+
+| rowid | type    | commitId | Action                     |
+| ----- | ------- | -------- | -------------------------- |
+| 10    | create  | abc123   | Création du goblin         |
+| 15    | update  | abc123   | Modification intermédiaire |
+| 20    | persist | abc123   | Première sauvegarde        |
+| 25    | update  | def456   | Modification intermédiaire |
+| 30    | persist | def456   | Deuxième sauvegarde        |
+| 35    | update  | ghi789   | Modification intermédiaire |
+| 40    | persist | ghi789   | Troisième sauvegarde       |
+
+Si la stratégie détermine que l'action persist avec `rowid = 20` peut être supprimée (en conservant les 2 plus récentes), alors toutes les actions avec `rowid < 20` seront également supprimées, soit les actions 10 et 15. Les actions intermédiaires entre les persist conservées (actions 25 et 35) sont préservées car elles font partie de l'historique nécessaire entre les sauvegardes conservées.
+
 ### Adaptation dynamique pour la synchronisation
 
 Le système de patching appliqué lors de l'initialisation modifie dynamiquement les requêtes selon le contexte de synchronisation. Dans les environnements synchronisés, la condition `AND commitId IS NOT NULL` est préservée dans toutes les sous-requêtes, garantissant que seules les actions déjà synchronisées sont candidates à la suppression.

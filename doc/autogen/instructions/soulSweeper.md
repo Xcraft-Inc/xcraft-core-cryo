@@ -2,15 +2,15 @@
 
 - Ce document doit concerner **uniquement le SoulSweeper**
 - Décrire en détail le fonctionnement du SoulSweeper
-  - A quoi ça sert, pourquoi faire
-  - Comment ça fonctionne dans les moindres détails
+  - A quoi ça sert et pourquoi faire
+  - Comment ça fonctionne (détails si pertinant)
   - On doit être capable de comprendre clairement les requêtes SQL
 - Toujours fournir des diagrammes de séquence (mermaid) si nécessaire
 - Ne **jamais écrire du code**, ce document doit uniquement expliquer le fonctionnement en français
 - Ne pas expliquer des banalités
 - Ne pas présenter les autres fonctionalités (qui ne concernent pas directement le SoulSweeper)
-- Ne pas expliquer les fonctionalitéà de mesures temporelles du SoulSweeper (banalité)
-- Ne pas expliquer le logging (banalité)
+- Ne pas expliquer les fonctionalités de mesures temporelles du SoulSweeper
+- Ne pas expliquer le logging
 - Si le contexte contient un **README précédent** "## README précédent"
   - Mettre à jour le contenu markdown en effectuant une adaptation de la dernière génération.
   - Ajouter ce qui manque.
@@ -35,14 +35,14 @@ Le README généré doit être en **Markdown** et suivre cette structure :
 
 ## Fonctionnement
 
-(Explications détaillées du fonctionnement en respectant les objectifs)
-(Garde les détails pour les requêtes SQL dans le chapitre "Anatomie de la requête SQL")
+(Explications du fonctionnement en respectant les objectifs)
+(Garde les détails pour les requêtes SQL uniquement dans le chapitre "Anatomie de la requête SQL")
 
 ## Anatomie de la requête SQL
 
-(Explications détaillées pour la requête SQL en montrant le code SQL tout en expliquant les parties)
-(Prend en compte dans tes explications le fait qu'entre chaque actions "persist" il y a d'autres actions et que les actions intermédiaire sont préservées)
-(Ajoute des tableaux d'exemples simplifiés de résultats pour que l'on comprenne bien ce qui se passe)
+(Explications détaillées pour la requête SQL en montrant le code SQL tout en expliquant les parties qui la compose)
+(Prend en compte dans tes explications le fait qu'entre chaque actions "persist" il y a d'autres actions et que les actions intermédiaires sont préservées)
+(Ajoute des tableaux d'exemples simplifiés de résultats (avec aussi des actions non-persist) pour que l'on comprenne bien ce qui se passe)
 ```
 
 ## Points d'attention particuliers
