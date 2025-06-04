@@ -337,83 +337,83 @@ La classe maintient plusieurs structures de données internes :
 
 #### Méthodes publiques
 
-**`freeze(resp, msg)`** - Persiste une action dans la base de données avec gestion des règles de rétention et des types d'actions. Supporte les modes 'all' et 'last' pour l'historique. Gère la synchronisation avec les actions brutes provenant du serveur et évite les doublons lors des transactions ouvertes.
+- **`freeze(resp, msg)`** — Persiste une action dans la base de données avec gestion des règles de rétention et des types d'actions. Supporte les modes 'all' et 'last' pour l'historique. Gère la synchronisation avec les actions brutes provenant du serveur et évite les doublons lors des transactions ouvertes.
 
-**`thaw(resp, msg)`** - Récupère les actions jusqu'à un timestamp donné avec support de pagination et filtrage par type. Envoie les résultats via des événements et applique les middlewares de transformation. Supporte la récupération partielle avec offset et limite.
+- **`thaw(resp, msg)`** — Récupère les actions jusqu'à un timestamp donné avec support de pagination et filtrage par type. Envoie les résultats via des événements et applique les middlewares de transformation. Supporte la récupération partielle avec offset et limite.
 
-**`frozen(resp, msg)`** - Retourne des statistiques sur le nombre d'actions gelées, avec support du filtrage par type d'acteur.
+- **`frozen(resp, msg)`** — Retourne des statistiques sur le nombre d'actions gelées, avec support du filtrage par type d'acteur.
 
-**`isEmpty(resp, msg)`** - Vérifie si une base de données existe et est vide, retournant un objet avec les propriétés `exists` et `empty`.
+- **`isEmpty(resp, msg)`** — Vérifie si une base de données existe et est vide, retournant un objet avec les propriétés `exists` et `empty`.
 
-**`immediate(resp, msg)`** - Démarre une transaction immédiate avec acquisition de verrous pour éviter les conflits d'accès concurrent.
+- **`immediate(resp, msg)`** — Démarre une transaction immédiate avec acquisition de verrous pour éviter les conflits d'accès concurrent.
 
-**`exclusive(resp, msg)`** - Démarre une transaction exclusive avec verrouillage complet de la base de données pour les opérations critiques.
+- **`exclusive(resp, msg)`** — Démarre une transaction exclusive avec verrouillage complet de la base de données pour les opérations critiques.
 
-**`commit(resp, msg)`** - Valide une transaction et envoie toutes les notifications en attente provenant des triggers FTS.
+- **`commit(resp, msg)`** — Valide une transaction et envoie toutes les notifications en attente provenant des triggers FTS.
 
-**`rollback(resp, msg)`** - Annule une transaction en cours et libère les verrous associés.
+- **`rollback(resp, msg)`** — Annule une transaction en cours et libère les verrous associés.
 
-**`branch(resp, msg)`** - Crée une nouvelle branche en renommant la base de données actuelle avec un timestamp.
+- **`branch(resp, msg)`** — Crée une nouvelle branche en renommant la base de données actuelle avec un timestamp.
 
-**`restore(resp, msg)`** - Restaure une base de données à un point dans le temps spécifique en copiant et tronquant les données.
+- **`restore(resp, msg)`** — Restaure une base de données à un point dans le temps spécifique en copiant et tronquant les données.
 
-**`registerLastActionTriggers(resp, msg)`** - Enregistre des topics d'événements à déclencher lors des modifications de la table `lastPersistedActions`. Nécessite que FTS soit activé.
+- **`registerLastActionTriggers(resp, msg)`** — Enregistre des topics d'événements à déclencher lors des modifications de la table `lastPersistedActions`. Nécessite que FTS soit activé.
 
-**`unregisterLastActionTriggers(resp, msg)`** - Désenregistre des topics d'événements précédemment configurés pour les triggers.
+- **`unregisterLastActionTriggers(resp, msg)`** — Désenregistre des topics d'événements précédemment configurés pour les triggers.
 
-**`sweep(resp, msg)`** - Lance le nettoyage automatique des anciennes actions selon une stratégie par défaut (30 jours, max 10 actions).
+- **`sweep(resp, msg)`** — Lance le nettoyage automatique des anciennes actions selon une stratégie par défaut (30 jours, max 10 actions).
 
-**`sweepByMaxCount(resp, msg)`** - Nettoie les actions en gardant un nombre maximum spécifique d'actions persist par goblin (entre 1 et 10).
+- **`sweepByMaxCount(resp, msg)`** — Nettoie les actions en gardant un nombre maximum spécifique d'actions persist par goblin (entre 1 et 10).
 
-**`getDataForSync(resp, msg)`** - Récupère les actions en attente de synchronisation et les derniers commitIds pour la synchronisation avec un serveur distant.
+- **`getDataForSync(resp, msg)`** — Récupère les actions en attente de synchronisation et les derniers commitIds pour la synchronisation avec un serveur distant.
 
-**`prepareDataForSync(resp, msg)`** - Marque les actions avec un commitId temporaire (zéro) en préparation de la synchronisation.
+- **`prepareDataForSync(resp, msg)`** — Marque les actions avec un commitId temporaire (zéro) en préparation de la synchronisation.
 
-**`updateActionsAfterSync(resp, msg)`** - Met à jour les actions avec le commitId définitif reçu du serveur après synchronisation réussie.
+- **`updateActionsAfterSync(resp, msg)`** — Met à jour les actions avec le commitId définitif reçu du serveur après synchronisation réussie.
 
-**`hasCommitId(resp, msg)`** - Vérifie si un commitId spécifique existe dans la base de données.
+- **`hasCommitId(resp, msg)`** — Vérifie si un commitId spécifique existe dans la base de données.
 
-**`getLastCommitId(resp, msg)`** - Récupère le dernier commitId enregistré dans la base de données.
+- **`getLastCommitId(resp, msg)`** — Récupère le dernier commitId enregistré dans la base de données.
 
-**`getSomeCommitIds(resp, msg)`** - Récupère une sélection de commitIds (le dernier, le 10ème, le 100ème, le 200ème, le 1000ème) pour l'optimisation de la synchronisation.
+- **`getSomeCommitIds(resp, msg)`** — Récupère une sélection de commitIds (le dernier, le 10ème, le 100ème, le 200ème, le 1000ème) pour l'optimisation de la synchronisation.
 
-**`getPersistFromRange(resp, msg)`** - Récupère les actions persist dans une plage de commitIds avec support du streaming pour les gros volumes et option d'inclusion du commitId de fin.
+- **`getPersistFromRange(resp, msg)`** — Récupère les actions persist dans une plage de commitIds avec support du streaming pour les gros volumes et option d'inclusion du commitId de fin.
 
-**`getAllPersist(resp, msg)`** - Récupère toutes les actions persist via un stream pour traitement en lots avec routage automatique.
+- **`getAllPersist(resp, msg)`** — Récupère toutes les actions persist via un stream pour traitement en lots avec routage automatique.
 
-**`bootstrapActions(resp, msg)`** - Initialise une base de données avec un flux d'actions provenant d'un autre système, avec gestion des actions en attente et création d'une base temporaire préfixée par un point. Supporte le renommage de l'ancienne base.
+- **`bootstrapActions(resp, msg)`** — Initialise une base de données avec un flux d'actions provenant d'un autre système, avec gestion des actions en attente et création d'une base temporaire préfixée par un point. Supporte le renommage de l'ancienne base.
 
-**`getZeroActions(resp, msg)`** - Récupère les actions marquées avec le commitId zéro (en attente de synchronisation).
+- **`getZeroActions(resp, msg)`** — Récupère les actions marquées avec le commitId zéro (en attente de synchronisation).
 
-**`getActionsByIds(resp, msg)`** - Récupère les dernières actions persist pour une liste d'identifiants de goblins.
+- **`getActionsByIds(resp, msg)`** — Récupère les dernières actions persist pour une liste d'identifiants de goblins.
 
-**`hasActions(resp, msg)`** - Vérifie si tous les goblins spécifiés ont des actions persist dans la base de données.
+- **`hasActions(resp, msg)`** — Vérifie si tous les goblins spécifiés ont des actions persist dans la base de données.
 
-**`isAlreadyCreated(resp, msg)`** - Détermine si un goblin a déjà été créé en analysant ses actions create et persist.
+- **`isAlreadyCreated(resp, msg)`** — Détermine si un goblin a déjà été créé en analysant ses actions create et persist.
 
-**`hasGoblin(resp, msg)`** - Vérifie l'existence d'un goblin dans la base de données.
+- **`hasGoblin(resp, msg)`** — Vérifie l'existence d'un goblin dans la base de données.
 
-**`loadMiddleware(resp, msg)`** - Charge dynamiquement un middleware depuis un chemin spécifié pour transformer les données lors de la récupération.
+- **`loadMiddleware(resp, msg)`** — Charge dynamiquement un middleware depuis un chemin spécifié pour transformer les données lors de la récupération.
 
-**`getEntityTypeCount(resp, msg)`** - Retourne les types d'entités et leur nombre d'occurrences dans la base de données.
+- **`getEntityTypeCount(resp, msg)`** — Retourne les types d'entités et leur nombre d'occurrences dans la base de données.
 
-**`actions(resp, msg)`** - Extrait une liste d'actions selon une plage de timestamps et envoie les résultats via des événements.
+- **`actions(resp, msg)`** — Extrait une liste d'actions selon une plage de timestamps et envoie les résultats via des événements.
 
-**`dump(resp, msg)`** - Exporte les actions vers une nouvelle base de données jusqu'à un timestamp donné.
+- **`dump(resp, msg)`** — Exporte les actions vers une nouvelle base de données jusqu'à un timestamp donné.
 
-**`branches(resp, msg)`** - Liste toutes les bases de données et leurs branches disponibles dans le répertoire Cryo.
+- **`branches(resp, msg)`** — Liste toutes les bases de données et leurs branches disponibles dans le répertoire Cryo.
 
-**`usable()`** - Vérifie si Cryo est utilisable (disponibilité de SQLite).
+- **`usable()`** — Vérifie si Cryo est utilisable (disponibilité de SQLite).
 
-**`timestamp()`** - Génère un timestamp Cryo au format ISO.
+- **`timestamp()`** — Génère un timestamp Cryo au format ISO.
 
-**`getLocation()`** - Retourne le répertoire de stockage des bases de données Cryo.
+- **`getLocation()`** — Retourne le répertoire de stockage des bases de données Cryo.
 
-**`sync(resp)`** - Méthode de synchronisation (actuellement vide, pour compatibilité).
+- **`sync(resp)`** — Méthode de synchronisation (actuellement vide, pour compatibilité).
 
-**`close(db)`** - Ferme une base de données spécifique.
+- **`close(db)`** — Ferme une base de données spécifique.
 
-**`dispose()`** - Nettoie toutes les ressources, ferme les workers et optimise les bases de données avant fermeture.
+- **`dispose()`** — Nettoie toutes les ressources, ferme les workers et optimise les bases de données avant fermeture.
 
 ### `lib/soulSweeper.js` - Nettoyage des données
 
@@ -421,11 +421,11 @@ Utilitaire spécialisé pour l'optimisation des bases de données avec plusieurs
 
 #### Méthodes publiques
 
-**`sweepByCount(count, dryrun)`** - Garde un nombre spécifique d'actions persist par goblin (entre 1 et 100). Utilise des requêtes SQL optimisées avec CTE pour identifier les actions à supprimer tout en préservant les actions intermédiaires.
+- **`sweepByCount(count=4, dryrun=true)`** — Garde un nombre spécifique d'actions persist par goblin (entre 1 et 100). Utilise des requêtes SQL optimisées avec CTE pour identifier les actions à supprimer tout en préservant les actions intermédiaires.
 
-**`sweepByDatetime(datetime, dryrun)`** - Supprime les actions antérieures à une date donnée tout en préservant au moins 2 actions persist par goblin pour maintenir la cohérence.
+- **`sweepByDatetime(datetime=now, dryrun=true)`** — Supprime les actions antérieures à une date donnée tout en préservant au moins 2 actions persist par goblin pour maintenir la cohérence.
 
-**`sweepForDays(days, max, dryrun)`** - Stratégie combinée qui garde un maximum d'actions récentes et une seule action pour les données plus anciennes que le nombre de jours spécifié.
+- **`sweepForDays(days=30, max=10, dryrun=true)`** — Stratégie combinée qui garde un maximum d'actions récentes et une seule action pour les données plus anciennes que le nombre de jours spécifié.
 
 Toutes les méthodes supportent un mode `dryrun` pour prévisualiser les suppressions sans les effectuer et incluent des optimisations automatiques (ANALYZE, VACUUM) pour les gros volumes. Le système de logging détaillé permet de suivre les performances et les résultats des opérations.
 
@@ -456,7 +456,9 @@ Endpoint pour publier les actions dans Google Cloud Pub/Sub :
 - Support de l'ordonnancement des messages avec clé configurable
 - Gestion robuste des erreurs de publication avec logging détaillé
 
-**`freeze(resp, msg, results)`** - Publie une action dans Google Pub/Sub avec les attributs appropriés et la clé d'ordonnancement configurée. Ajoute automatiquement les métadonnées d'origine et de timestamp de publication.
+#### Méthodes publiques
+
+- **`freeze(resp, msg, results)`** — Publie une action dans Google Pub/Sub avec les attributs appropriés et la clé d'ordonnancement configurée. Ajoute automatiquement les métadonnées d'origine et de timestamp de publication.
 
 ### `lib/sqlite-vec/loader.js` - Chargement d'extension vectorielle
 
@@ -470,9 +472,11 @@ Module pour charger l'extension SQLite de recherche vectorielle :
 - Chargement dynamique sécurisé avec vérification d'existence des fichiers
 - Support des applications Electron avec gestion des chemins unpacked
 
-**`load(db)`** - Charge l'extension vec0 dans une instance de base de données SQLite avec résolution automatique du chemin selon la plateforme.
+#### Méthodes publiques
 
-**`getLoadablePath()`** - Résout le chemin vers l'extension SQLite-vec selon la plateforme et l'architecture détectées.
+- **`load(db)`** — Charge l'extension vec0 dans une instance de base de données SQLite avec résolution automatique du chemin selon la plateforme.
+
+- **`getLoadablePath()`** — Résout le chemin vers l'extension SQLite-vec selon la plateforme et l'architecture détectées.
 
 ### `lib/sqlite-vec/worker.js` - Worker pour embeddings
 
