@@ -12,15 +12,19 @@ Le SoulSweeper est un composant spécialisé dans l'optimisation et le nettoyage
 
 - [Architecture du SoulSweeper](#architecture-du-soulsweeper)
 - [Stratégies de nettoyage](#stratégies-de-nettoyage)
-- [Requêtes SQL de nettoyage](#requêtes-sql-de-nettoyage)
 - [Mécanismes de sécurité et validation](#mécanismes-de-sécurité-et-validation)
 - [Optimisation des performances](#optimisation-des-performances)
 - [Intégration avec Cryo](#intégration-avec-cryo)
 - [Gestion des environnements synchronisés](#gestion-des-environnements-synchronisés)
 
-### La requête SQL
+### Anatomie de la requête SQL
 
-- [Anatomie de la requête de nettoyage par nombre](#anatomie-de-la-requête-de-nettoyage-par-nombre)
+- [Structure générale de la requête](#structure-générale-de-la-requête)
+- [Sous-requête de calcul des actions à conserver](#sous-requête-de-calcul-des-actions-à-conserver)
+- [Mécanisme de protection par valeurs nulles](#mécanisme-de-protection-par-valeurs-nulles)
+- [Gestion des bornes de suppression](#gestion-des-bornes-de-suppression)
+- [Jointure et sélection finale](#jointure-et-sélection-finale)
+- [Adaptation dynamique pour la synchronisation](#adaptation-dynamique-pour-la-synchronisation)
 
 ## Fonctionnement
 
@@ -38,8 +42,6 @@ Le SoulSweeper distingue automatiquement les environnements avec et sans synchro
 
 L'architecture utilise un système de requêtes préparées avec patching dynamique selon le contexte de synchronisation, permettant une adaptation transparente aux différents modes de fonctionnement.
 
-Le SoulSweeper intègre également un système de mesure temporelle précis utilisant `hrtime.bigint()` pour monitorer les performances et optimiser les opérations de maintenance. Il génère des logs contextuels différenciés selon le mode d'exécution (dry-run vs réel) pour faciliter le debugging et l'audit des opérations.
-
 ### Stratégies de nettoyage
 
 #### Nettoyage par nombre d'actions (sweepByCount)
@@ -56,7 +58,7 @@ La méthode retourne le nombre exact d'actions supprimées et peut fonctionner e
 
 Cette stratégie supprime les actions persist antérieures à une date donnée, en conservant au minimum les deux dernières actions persist par goblin. Le mécanisme garantit qu'aucun goblin ne se retrouve sans historique récent, même si toutes ses actions sont antérieures à la date limite.
 
-La logique de sélection identifie pour chaque goblin la première action persist à supprimer et la dernière action persist dans la plage de suppression. Le système utilise une union avec des valeurs nulles pour forcer la conservation d'au moins deux actions récentes par goblin.
+La logique de sélection identifie pour chaque goblin la première action persist à supprimer et la dernière action persist dans la plage de suppression. Le système utilise une union avec seulement deux valeurs nulles pour forcer la conservation d'au moins deux actions récentes par goblin.
 
 La date peut être fournie sous format ISO string ou générée automatiquement via `this.#sqlite.timestamp()`. La validation temporelle s'assure de la cohérence des paramètres avant exécution.
 
@@ -70,30 +72,6 @@ Cette approche combine les deux méthodes précédentes pour créer une stratég
 Cette stratégie permet de maintenir un historique détaillé récent tout en préservant une trace historique à long terme, optimisant ainsi l'équilibre entre performance et conservation des données.
 
 La méthode calcule automatiquement la date limite en soustrayant le nombre de jours spécifié à la date courante, puis applique séquentiellement les deux stratégies en additionnant leurs résultats.
-
-### Requêtes SQL de nettoyage
-
-#### Structure des requêtes de nettoyage par nombre
-
-La requête principale utilise une architecture complexe en plusieurs étapes pour identifier précisément les actions à supprimer. Le processus commence par sélectionner toutes les actions liées aux goblins concernés, puis utilise une jointure avec une sous-requête qui calcule les actions persist à conserver.
-
-La sous-requête interne identifie d'abord les actions persist dans la plage de suppression pour chaque goblin. Cette plage est délimitée par la première action persist à supprimer et la N-ième action persist à conserver en partant de la fin. Le système utilise une technique sophistiquée avec 100 valeurs nulles générées artificiellement pour garantir la conservation du nombre requis d'actions, même dans les cas où un goblin possède moins d'actions que le seuil de conservation.
-
-La jointure externe permet ensuite de sélectionner toutes les actions du goblin dont le rowid est inférieur au maximum des actions à conserver, incluant ainsi toutes les actions intermédiaires entre les actions persist supprimées.
-
-#### Structure des requêtes de nettoyage par date
-
-Ces requêtes suivent un pattern similaire mais utilisent un critère temporel avec protection automatique. Le système identifie pour chaque goblin la première action persist à supprimer et calcule la dernière action persist dans la plage de suppression en excluant automatiquement les deux plus récentes.
-
-La protection est assurée par une union avec des valeurs nulles qui force la conservation d'au moins deux actions persist récentes par goblin. Cette approche garantit qu'aucun goblin ne perd complètement son historique, même si toutes ses actions sont antérieures à la date limite spécifiée.
-
-La condition temporelle `timestamp < $datetime` est appliquée dans la sous-requête de sélection des actions candidates, permettant un filtrage précis basé sur la date fournie en paramètre.
-
-#### Gestion des environnements avec/sans synchronisation
-
-Le SoulSweeper adapte automatiquement ses requêtes selon le contexte via une méthode de patching appliquée lors de l'initialisation. Dans les environnements avec synchronisation, la condition `AND commitId IS NOT NULL` est conservée pour préserver les actions non synchronisées. Dans les environnements sans synchronisation, cette condition est supprimée via `replaceAll` pour traiter toutes les actions sans distinction.
-
-Cette adaptation transparente permet au SoulSweeper de fonctionner optimalement dans tous les contextes sans nécessiter de configuration manuelle. Le paramètre `withCommits` est déterminé automatiquement lors de l'instanciation selon la configuration de synchronisation détectée.
 
 ### Mécanismes de sécurité et validation
 
@@ -135,12 +113,6 @@ Toutes les requêtes SQL sont préparées au moment de l'initialisation, élimin
 
 Les requêtes sont stockées dans des propriétés privées de classe (préfixées par `#`) et préparées une seule fois lors de l'instanciation, garantissant des performances optimales pour les opérations répétées.
 
-#### Système de mesure temporelle précis
-
-Le SoulSweeper intègre un monitoring avancé utilisant `hrtime.bigint()` pour une mesure ultra-précise à la nanoseconde. Le logging contextuel différencie les logs selon le mode (dry-run vs réel). Le monitoring des opérations coûteuses assure un suivi spécifique des opérations VACUUM. Les métriques de performance permettent la collecte de données pour une optimisation continue.
-
-La méthode privée `#time()` convertit les mesures en secondes avec une précision de trois décimales, facilitant l'interprétation des performances dans les logs.
-
 ### Intégration avec Cryo
 
 #### Instanciation automatique et gestion du cycle de vie
@@ -177,13 +149,11 @@ Dans les environnements avec synchronisation active, le système protège les ac
 
 Le patching des requêtes via la fonction `patch` applique ou supprime la condition `AND commitId IS NOT NULL` selon le contexte, garantissant une adaptation transparente aux deux modes de fonctionnement.
 
-## La requête SQL
+## Anatomie de la requête SQL
 
-### Anatomie de la requête de nettoyage par nombre
+### Structure générale de la requête
 
 La requête de nettoyage par nombre d'actions représente l'une des pièces maîtresses du SoulSweeper. Elle s'articule autour d'une architecture SQL complexe qui garantit la préservation de l'intégrité des données tout en optimisant l'espace de stockage.
-
-#### Structure générale de la requête
 
 ```sql
 DELETE FROM actions
@@ -251,7 +221,7 @@ La requête principale suit un pattern de sélection en cascade qui commence par
 
 Le cœur de la logique repose sur une jointure externe entre la table `actions` et une sous-requête complexe nommée `removeList`. Cette jointure permet d'identifier pour chaque goblin les actions qui peuvent être supprimées tout en préservant un nombre minimum d'actions persist.
 
-#### Sous-requête de calcul des actions à conserver
+### Sous-requête de calcul des actions à conserver
 
 La sous-requête `removeList` constitue le cerveau de l'opération. Elle calcule pour chaque goblin l'action persist la plus récente qui peut être supprimée, en s'assurant qu'au moins N actions persist plus récentes sont conservées.
 
@@ -259,7 +229,7 @@ Cette sous-requête utilise une technique sophistiquée de regroupement par `gob
 
 La logique de groupement `GROUP BY goblinId` avec `max(rowid)` garantit qu'une seule valeur de référence est calculée par goblin, évitant les ambiguïtés dans la sélection des actions à supprimer.
 
-#### Mécanisme de protection par valeurs nulles
+### Mécanisme de protection par valeurs nulles
 
 L'une des innovations les plus remarquables de cette requête réside dans l'utilisation de 100 valeurs nulles générées artificiellement via une clause `VALUES`. Cette technique garantit qu'aucun goblin ne perd plus d'actions que le seuil autorisé, même dans les cas où il possède moins d'actions persist que la limite de conservation.
 
@@ -276,7 +246,7 @@ Les valeurs nulles sont injectées dans la sous-requête de sélection des actio
 
 Cette approche élégante évite les conditions complexes et les vérifications de comptage, laissant le moteur SQL gérer naturellement les cas limites via le tri et la limitation des résultats.
 
-#### Gestion des bornes de suppression
+### Gestion des bornes de suppression
 
 La détermination des bornes de suppression utilise une logique de fenêtrage sophistiquée. La borne inférieure est calculée en sélectionnant la première action persist du goblin avec un `commitId` valide :
 
@@ -314,7 +284,7 @@ Cette approche garantit que même si un goblin possède exactement N actions per
 
 Le double tri (`ORDER BY rowid DESC` puis `ORDER BY rowid ASC`) permet de sélectionner précisément la N-ième action en partant de la fin, puis de récupérer la plus ancienne de cette sélection comme borne de référence.
 
-#### Jointure et sélection finale
+### Jointure et sélection finale
 
 La jointure externe finale utilise deux conditions critiques : l'égalité des identifiants de goblin et la comparaison des `rowid`. La condition `actions.rowid < removeList.max` (pour le nettoyage par nombre) ou `actions.rowid <= removeList.max` (pour le nettoyage par date) détermine précisément quelles actions sont incluses dans la suppression.
 
@@ -322,7 +292,7 @@ Cette différence subtile entre `<` et `<=` reflète la philosophie de chaque st
 
 La jointure `LEFT JOIN` garantit que tous les goblins sont considérés, même ceux qui n'ont pas d'actions dans la plage de suppression, évitant les suppressions accidentelles par omission.
 
-#### Adaptation dynamique pour la synchronisation
+### Adaptation dynamique pour la synchronisation
 
 Le système de patching appliqué lors de l'initialisation modifie dynamiquement les requêtes selon le contexte de synchronisation. Dans les environnements synchronisés, la condition `AND commitId IS NOT NULL` est préservée dans toutes les sous-requêtes, garantissant que seules les actions déjà synchronisées sont candidates à la suppression.
 
@@ -335,61 +305,7 @@ const patch = (query) =>
 
 Le patching s'applique à toutes les occurrences de la condition dans les requêtes complexes, garantissant une cohérence totale entre les différentes sous-requêtes et évitant les incohérences de comportement.
 
-#### Requête de nettoyage par date
-
-La requête de nettoyage par date suit une structure similaire mais adapte les critères de sélection :
-
-```sql
--- Select all actions to delete
-SELECT rowid
-FROM actions
-LEFT JOIN (
-  -- Select only the latest actions to collect
-  SELECT max(rowid) AS max, goblinId
-  FROM (
-    -- Select all persist actions to collect
-    SELECT rowid, goblin AS goblinId
-    FROM actions
-    WHERE rowid BETWEEN (
-        -- Select the first action to remove
-        SELECT rowid
-        FROM actions
-        WHERE goblin = goblinId
-          AND type = 'persist'
-          AND commitId IS NOT NULL
-        ORDER BY rowid ASC
-        LIMIT 1
-      ) AND (
-        -- Select the X'th older action to remove (we keep at least the latest actions)
-        SELECT rowid
-        FROM (
-          SELECT rowid
-          FROM actions
-          WHERE goblin = goblinId
-            AND type = 'persist'
-            AND commitId IS NOT NULL
-            AND timestamp < $datetime -- PARAMETER
-          UNION ALL
-          SELECT NULL as rowid
-          ORDER BY rowid DESC
-          LIMIT 2
-        )
-        ORDER BY rowid ASC
-        LIMIT 1
-      )
-      AND type = 'persist'
-      AND commitId IS NOT NULL
-    ORDER BY goblin, rowid ASC
-  )
-  GROUP BY goblinId
-) AS removeList
-WHERE actions.goblin = removeList.goblinId
-  AND actions.rowid <= removeList.max -- Here max is in the collectable list
-```
-
-La différence principale réside dans l'ajout de la condition temporelle `AND timestamp < $datetime` et l'utilisation de seulement 2 valeurs nulles de protection au lieu de 100, reflétant la stratégie de conservation minimale de 2 actions persist par goblin.
-
-La condition finale utilise `<=` au lieu de `<`, incluant l'action de référence dans la suppression, ce qui est cohérent avec l'objectif de supprimer toutes les actions antérieures à une date donnée.
+La requête de nettoyage par date suit une structure similaire mais adapte les critères de sélection avec l'ajout de la condition temporelle `AND timestamp < $datetime` et l'utilisation de seulement 2 valeurs nulles de protection au lieu de 100, reflétant la stratégie de conservation minimale de 2 actions persist par goblin.
 
 Le SoulSweeper constitue ainsi un composant essentiel pour maintenir les performances et la taille des bases de données Cryo dans des environnements de production à long terme, tout en préservant l'intégrité des données et la cohérence de l'historique des actions à travers des stratégies de nettoyage sophistiquées et adaptatives.
 

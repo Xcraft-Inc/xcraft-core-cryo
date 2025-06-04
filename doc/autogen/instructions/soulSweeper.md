@@ -9,6 +9,8 @@
 - Ne **jamais écrire du code**, ce document doit uniquement expliquer le fonctionnement en français
 - Ne pas expliquer des banalités
 - Ne pas présenter les autres fonctionalités (qui ne concernent pas directement le SoulSweeper)
+- Ne pas expliquer les fonctionalitéà de mesures temporelles du SoulSweeper (banalité)
+- Ne pas expliquer le logging (banalité)
 - Si le contexte contient un **README précédent** "## README précédent"
   - Mettre à jour le contenu markdown en effectuant une adaptation de la dernière génération.
   - Ajouter ce qui manque.
@@ -33,11 +35,11 @@ Le README généré doit être en **Markdown** et suivre cette structure :
 
 ## Fonctionnement
 
-(Explication détaillée du fonctionnement en respectant les objectifs)
+(Explication détaillée du fonctionnement en respectant les objectifs (garde les détails pour les requêtes SQL dans le chapitre "Anatomie de la requête SQL"))
 
-## La requête SQL
+## Anatomie de la requête SQL
 
-(Explication spécialement détaillée pour la requête SQL en montrant le code SQL tout en expliquant les parties)
+(Explication détaillée pour la requête SQL en montrant le code SQL tout en expliquant les parties)
 ```
 
 ## Points d'attention particuliers
