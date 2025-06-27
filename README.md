@@ -1,4 +1,4 @@
-# 📘 Documentation du module xcraft-core-cryo
+# 📘 xcraft-core-cryo
 
 ## Aperçu
 
@@ -22,6 +22,7 @@ Le module `xcraft-core-cryo` est organisé autour de plusieurs composants clés 
 - **StreamSQL** : Classes pour la lecture/écriture de flux de données SQL
 - **Endpoints** : Extensions pour connecter Cryo à d'autres systèmes (comme Google Queue)
 - **SQLite-Vec** : Support pour la recherche vectorielle via une extension SQLite
+- **Worker** : Thread dédié au traitement des embeddings vectoriels
 
 Le module expose une API complète via `xcraftCommands` pour la gestion des actions, avec des fonctionnalités de :
 
@@ -30,6 +31,7 @@ Le module expose une API complète via `xcraftCommands` pour la gestion des acti
 - Synchronisation et transactions
 - Recherche plein texte (FTS) et vectorielle (VEC)
 - Nettoyage et optimisation des données
+- Bootstrap et migration de données
 
 ## Fonctionnement global
 
@@ -178,6 +180,23 @@ async withTransaction() {
 }
 ```
 
+### Bootstrap d'une base de données
+
+```javascript
+// Dans une méthode d'un acteur Elf
+async bootstrapDatabase(streamId, routingKey) {
+  const cryo = this.quest.getAPI('cryo');
+
+  // Bootstrap avec un flux d'actions depuis un autre système
+  await cryo.bootstrapActions({
+    db: 'myDatabase',
+    streamId,
+    routingKey,
+    rename: true // Renommer l'ancienne base
+  });
+}
+```
+
 ### Nettoyage des anciennes actions
 
 ```javascript
@@ -196,29 +215,6 @@ async cleanupDatabase() {
     dbs: ['myDatabase'],
     max: 5
   });
-}
-```
-
-### Gestion des branches
-
-```javascript
-// Dans une méthode d'un acteur Elf
-async manageBranches() {
-  const cryo = this.quest.getAPI('cryo');
-
-  // Créer une nouvelle branche
-  await cryo.branch({
-    db: 'myDatabase'
-  });
-
-  // Lister toutes les branches disponibles
-  const branches = await cryo.branches();
-  console.log(branches);
-  // {
-  //   myDatabase: {
-  //     branches: ['20231201120000', '20231202150000']
-  //   }
-  // }
 }
 ```
 
@@ -246,23 +242,6 @@ async syncData() {
     db: 'myDatabase',
     serverCommitId: 'abc123-def456-...',
     rows: syncData.stagedActions.map(action => action.rowid)
-  });
-}
-```
-
-### Enregistrement de triggers pour notifications
-
-```javascript
-// Dans une méthode d'un acteur Elf
-async setupTriggers() {
-  const cryo = this.quest.getAPI('cryo');
-
-  // Enregistrer des triggers pour être notifié des changements
-  await cryo.registerLastActionTriggers({
-    actorType: 'document',
-    onInsertTopic: 'document.created',
-    onUpdateTopic: 'document.updated',
-    onDeleteTopic: 'document.deleted'
   });
 }
 ```
@@ -327,8 +306,10 @@ La classe `Cryo` hérite de `SQLite` et implémente toutes les fonctionnalités 
 La classe maintient plusieurs structures de données internes :
 
 - `#soulSweeper` : Map des instances SoulSweeper par base de données
-- `#worker` : Map des worker threads pour les embeddings vectoriels
-- `#workerUnsub` : Map des fonctions de désinscription pour les workers
+- `#fts` : Map indiquant si FTS est activé par base de données
+- `#vec` : Map indiquant si VEC est activé par base de données
+- `#embedUnsub` : Map des fonctions de désinscription pour les workers d'embeddings
+- `#piscina` : Instance Piscina pour les worker threads
 - `#userIndices` : Indices personnalisés par base de données
 - `#boostrapping` : Flag indiquant si un bootstrap est en cours
 - `_middleware` : Fonction middleware pour transformer les données
@@ -344,6 +325,10 @@ La classe maintient plusieurs structures de données internes :
 - **`frozen(resp, msg)`** — Retourne des statistiques sur le nombre d'actions gelées, avec support du filtrage par type d'acteur.
 
 - **`isEmpty(resp, msg)`** — Vérifie si une base de données existe et est vide, retournant un objet avec les propriétés `exists` et `empty`.
+
+- **`init(resp, msg)`** — Initialise et ouvre une base de données spécifique, retournant true en cas de succès.
+
+- **`begin(resp, msg)`** — Démarre une transaction basique avec acquisition de verrous pour éviter les conflits d'accès concurrent.
 
 - **`immediate(resp, msg)`** — Démarre une transaction immédiate avec acquisition de verrous pour éviter les conflits d'accès concurrent.
 
@@ -478,7 +463,7 @@ Module pour charger l'extension SQLite de recherche vectorielle :
 
 - **`getLoadablePath()`** — Résout le chemin vers l'extension SQLite-vec selon la plateforme et l'architecture détectées.
 
-### `lib/sqlite-vec/worker.js` - Worker pour embeddings
+### `lib/worker.js` - Worker pour embeddings
 
 Worker thread dédié au traitement des embeddings vectoriels :
 
@@ -487,9 +472,14 @@ Worker thread dédié au traitement des embeddings vectoriels :
 - Traitement isolé dans un thread séparé pour éviter le blocage du thread principal
 - Conversion automatique des embeddings hexadécimaux en vecteurs flottants 32 bits
 - Support du partitionnement par locale avec fallback sur la locale par défaut configurée
-- Nettoyage automatique des ressources et gestion des signaux système (SIGTERM)
 - Suppression et réinsertion automatique des embeddings lors des mises à jour d'entités
 - Gestion robuste des erreurs avec logging détaillé
+
+#### Méthodes publiques
+
+- **`populate({db, location, enableFTS, enableVEC, defaultLocale})`** — Peuple la table FTS et/ou VEC avec les données existantes de `lastPersistedActions`. Reconstruit les index de recherche plein texte et vectorielle lors de l'initialisation ou migration d'une base de données.
+
+- **`embed({db, location, goblin, defaultLocale})`** — Traite les embeddings pour un goblin spécifique en extrayant les vecteurs de la dernière action persist et les insérant dans la table vectorielle. Supprime automatiquement les anciens embeddings avant insertion.
 
 La table `embeddings` utilise la structure suivante :
 
@@ -507,25 +497,6 @@ CREATE VIRTUAL TABLE embeddings USING vec0(
 Cette structure permet des recherches vectorielles efficaces avec partitionnement par locale et métrique de distance cosinus pour la similarité sémantique. Les embeddings sont extraits du champ `meta.vectors` des actions persist et convertis depuis leur format hexadécimal vers des vecteurs flottants.
 
 Le worker traite automatiquement les messages contenant un identifiant de goblin et extrait les embeddings de la dernière action persist correspondante pour les insérer dans la table vectorielle.
-
-### `test/soulSweeper.nospec.js` - Exemple d'utilisation
-
-Fichier d'exemple montrant l'utilisation directe de SoulSweeper pour le nettoyage de bases de données :
-
-```javascript
-const {SQLite} = require('xcraft-core-book');
-const SoulSweeper = require('../lib/soulSweeper.js');
-
-const dbName = 'my_database';
-const dbLocation = '/mnt/somewhere';
-
-const sqlite = new SQLite(dbLocation);
-sqlite.open(dbName, '', {});
-
-const handle = sqlite.getHandle(dbName)();
-const soulSweeper = new SoulSweeper(handle, dbName);
-soulSweeper.sweepForDays(30, 10, false);
-```
 
 ---
 
