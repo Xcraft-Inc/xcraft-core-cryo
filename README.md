@@ -477,7 +477,7 @@ Worker thread dédié au traitement des embeddings vectoriels :
 
 #### Méthodes publiques
 
-- **`populate({db, location, enableFTS, enableVEC, defaultLocale})`** — Peuple la table FTS et/ou VEC avec les données existantes de `lastPersistedActions`. Reconstruit les index de recherche plein texte et vectorielle lors de l'initialisation ou migration d'une base de données.
+- **`populate({db, location, enableFTS, enableVEC, defaultLocale, indices})`** — Peuple la table FTS et/ou VEC avec les données existantes de `lastPersistedActions`. Reconstruit les index de recherche plein texte et vectorielle lors de l'initialisation ou migration d'une base de données. Applique également les indices personnalisés fournis.
 
 - **`embed({db, location, goblin, defaultLocale})`** — Traite les embeddings pour un goblin spécifique en extrayant les vecteurs de la dernière action persist et les insérant dans la table vectorielle. Supprime automatiquement les anciens embeddings avant insertion.
 
