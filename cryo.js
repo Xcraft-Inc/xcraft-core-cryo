@@ -259,6 +259,15 @@ module.exports.xcraftCommands = function () {
           },
         },
       },
+      countNewRowsFrom: {
+        parallel: true,
+        desc: 'count how many rows since a commitId',
+        options: {
+          params: {
+            required: ['db', 'commitId'],
+          },
+        },
+      },
       hasCommitId: {
         parallel: true,
         desc: 'test if a commitId exists',
