@@ -43,10 +43,16 @@ module.exports = [
     default: [],
   },
   {
-    type: 'list',
+    type: 'input',
     name: 'vec.dimensions',
     message: 'Number of dimensions for embeddings',
     default: 4096,
+  },
+  {
+    type: 'input',
+    name: 'vec.vecFunc',
+    message: 'Number of dimensions for embeddings',
+    default: 'vec_f32',
   },
   {
     type: 'confirm',
