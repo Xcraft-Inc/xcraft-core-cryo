@@ -259,9 +259,18 @@ module.exports.xcraftCommands = function () {
           },
         },
       },
-      countNewRowsFrom: {
+      countPersistsFrom: {
         parallel: true,
-        desc: 'count how many rows since a commitId',
+        desc: 'count how many persists',
+        options: {
+          params: {
+            required: ['db'],
+          },
+        },
+      },
+      countNewPersistsFrom: {
+        parallel: true,
+        desc: 'count how many persists since a commitId',
         options: {
           params: {
             required: ['db', 'commitId'],
