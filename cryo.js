@@ -394,6 +394,15 @@ module.exports.xcraftCommands = function () {
           },
         },
       },
+      refreshEmbeddings: {
+        parallel: true,
+        desc: 'refresh embeddings (vectors)',
+        options: {
+          params: {
+            optional: ['dbs'],
+          },
+        },
+      },
     },
   };
 };
