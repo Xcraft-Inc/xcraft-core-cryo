@@ -111,3 +111,143 @@ describe.skip('xcraft.cryo.soulSweeper', function () {
     }
   });
 });
+
+describe('xcraft.cryo.soulSweeper (unit)', function () {
+  function createDB() {
+    const sqlite = new SQLite(dbLocation);
+    sqlite.open(
+      ':memory:',
+      `
+        CREATE TABLE actions (
+          rowid INTEGER PRIMARY KEY,
+          goblin TEXT,
+          type TEXT,
+          commitId TEXT,
+          timestamp TEXT
+        )
+      `,
+      {
+        insert: `
+          INSERT INTO actions (goblin, type, commitId, timestamp)
+          VALUES ($goblin, $type, $commitId, $timestamp)
+       `,
+      }
+    );
+    return sqlite.getHandle(':memory:')();
+  }
+
+  function insert(db, rows) {
+    const stmt = db.prepare(
+      `INSERT INTO actions (goblin, type, commitId, timestamp)
+       VALUES ($goblin, $type, $commitId, $timestamp)`
+    );
+    for (const row of rows) {
+      stmt.run(row);
+    }
+  }
+
+  it('sweepByCount(2) keeps the 2 latest persists per goblin', function () {
+    const db = createDB();
+    insert(db, [
+      {goblin: 'a', type: 'persist', commitId: 'c1', timestamp: '2025-01-01'},
+      {goblin: 'a', type: 'create', commitId: 'c2', timestamp: '2025-01-02'},
+      {goblin: 'a', type: 'persist', commitId: 'c3', timestamp: '2025-01-03'},
+      {goblin: 'a', type: 'persist', commitId: 'c4', timestamp: '2025-01-04'},
+      {goblin: 'a', type: 'persist', commitId: 'c5', timestamp: '2025-01-05'},
+      {goblin: 'b', type: 'persist', commitId: 'c6', timestamp: '2025-01-01'},
+      {goblin: 'b', type: 'persist', commitId: 'c7', timestamp: '2025-01-02'},
+    ]);
+
+    const sweeper = new SoulSweeper(db, 'test');
+    sweeper.sweepByCount(2, false);
+
+    const remaining = db
+      .prepare(
+        `SELECT goblin, COUNT(*) as cnt FROM actions
+         WHERE type = 'persist' AND commitId IS NOT NULL
+         GROUP BY goblin`
+      )
+      .all();
+
+    for (const {goblin, cnt} of remaining) {
+      expect(cnt, `goblin ${goblin} should have at most 2 persists`).to.be.lte(
+        2
+      );
+    }
+
+    /* Goblin 'a' had 4 persists → must have exactly 2 */
+    const a = remaining.find((r) => r.goblin === 'a');
+    expect(a.cnt).to.equal(2);
+
+    /* Goblin 'b' had 2 persists → keep all */
+    const b = remaining.find((r) => r.goblin === 'b');
+    expect(b.cnt).to.equal(2);
+  });
+
+  it('sweepByCount keeps intermediate actions between retained persists', function () {
+    const db = createDB();
+    // persist1 → update → update → persist2 (keep) → update (keep) → persist3 (keep)
+    insert(db, [
+      {goblin: 'a', type: 'persist', commitId: 'c1', timestamp: '2025-01-01'},
+      {goblin: 'a', type: 'update', commitId: null, timestamp: '2025-01-02'},
+      {goblin: 'a', type: 'update', commitId: null, timestamp: '2025-01-02'},
+      {goblin: 'a', type: 'persist', commitId: 'c3', timestamp: '2025-01-03'},
+      {goblin: 'a', type: 'update', commitId: null, timestamp: '2025-01-04'},
+      {goblin: 'a', type: 'persist', commitId: 'c5', timestamp: '2025-01-05'},
+    ]);
+
+    const sweeper = new SoulSweeper(db, 'test');
+    sweeper.sweepByCount(2, false);
+
+    const remaining = db
+      .prepare(`SELECT type FROM actions ORDER BY rowid`)
+      .all();
+    /* persist1 and its intermediate updates are removed
+     * persist3, update between 2 and 3, persist5 stay here
+     */
+    const types = remaining.map((r) => r.type);
+    expect(types).to.deep.equal(['persist', 'update', 'persist']);
+  });
+
+  it('withCommits=false sweeps uncommitted persists too', function () {
+    const db = createDB();
+    insert(db, [
+      {goblin: 'a', type: 'persist', commitId: null, timestamp: '2025-01-01'},
+      {goblin: 'a', type: 'persist', commitId: null, timestamp: '2025-01-02'},
+      {goblin: 'a', type: 'persist', commitId: 'c3', timestamp: '2025-01-03'},
+    ]);
+
+    const sweeperWith = new SoulSweeper(db, 'test', true);
+    const sweeperWithout = new SoulSweeper(db, 'test', false);
+
+    /* With withCommits=true: only c3 is "persist+commitId", nothing to sweep for count=2 */
+    expect(sweeperWith.sweepByCount(2, true)).to.equal(0);
+    /* Without: 3 persists are visible, 1 sweepable for count=2 */
+    expect(sweeperWithout.sweepByCount(2, true)).to.equal(1);
+  });
+
+  it('sweepByCount throws for count < 1 or > 100', function () {
+    const db = createDB();
+    const sweeper = new SoulSweeper(db, 'test');
+    expect(() => sweeper.sweepByCount(0)).to.throw();
+    expect(() => sweeper.sweepByCount(101)).to.throw();
+    expect(() => sweeper.sweepByCount(1)).not.to.throw();
+    expect(() => sweeper.sweepByCount(100)).not.to.throw();
+  });
+
+  it('sweepByCount on empty DB returns 0', function () {
+    const db = createDB();
+    const sweeper = new SoulSweeper(db, 'test');
+    expect(sweeper.sweepByCount(4, false)).to.equal(0);
+  });
+
+  it('sweepByCount when goblin has fewer persists than count keeps all', function () {
+    const db = createDB();
+    insert(db, [
+      {goblin: 'a', type: 'persist', commitId: 'c1', timestamp: '2025-01-01'},
+    ]);
+    const sweeper = new SoulSweeper(db, 'test');
+    expect(sweeper.sweepByCount(4, false)).to.equal(0);
+    expect(db.prepare(`SELECT COUNT(*) as n FROM actions`).get().n).to.equal(1);
+  });
+});
