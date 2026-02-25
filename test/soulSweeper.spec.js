@@ -186,7 +186,7 @@ describe('xcraft.cryo.soulSweeper (unit)', function () {
 
   it('sweepByCount keeps intermediate actions between retained persists', function () {
     const db = createDB();
-    // persist1 → update → update → persist2 (keep) → update (keep) → persist3 (keep)
+    /* persist1 → update → update → persist2 (keep) → update (keep) → persist3 (keep) */
     insert(db, [
       {goblin: 'a', type: 'persist', commitId: 'c1', timestamp: '2025-01-01'},
       {goblin: 'a', type: 'update', commitId: null, timestamp: '2025-01-02'},
