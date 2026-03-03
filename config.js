@@ -76,7 +76,7 @@ module.exports = [
     type: 'confirm',
     name: 'workers.streamPort.timeout',
     message: 'Default streamPort backpressure timeout',
-    default: 60000,
+    default: 120000,
   },
   {
     type: 'input',
