@@ -73,6 +73,12 @@ module.exports = [
     default: false,
   },
   {
+    type: 'confirm',
+    name: 'workers.streamPort.timeout',
+    message: 'Default streamPort backpressure timeout',
+    default: 60000,
+  },
+  {
     type: 'input',
     name: 'googleQueue.topic',
     message: 'Topic to use to publish messages',
