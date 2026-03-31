@@ -25,7 +25,7 @@
     "piscina": "^5.1.2",
     "uuid": "^8.3.2",
     "safe-stable-stringify": "^2.5.0",
-    "sqlite-vec": "^0.1.9-alpha.1",
+    "sqlite-vec": "^0.1.9",
     "xcraft-core-book": "^1.13.0",
     "xcraft-core-fs": "^2.0.0",
     "xcraft-core-utils": "^4.0.0"
