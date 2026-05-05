@@ -302,7 +302,7 @@ La classe `Cryo` hérite de `SQLite` ([xcraft-core-book]) et constitue le cœur 
 
 Le constructeur détermine le répertoire de stockage (`xcraft.xcraftRoot/var/cryo` par défaut), charge la configuration et prépare toutes les requêtes SQL préparées. Selon la configuration, il génère les DDL pour les tables optionnelles (`timetable`, `lastPersistedActions`, `fts_idx`, `embeddings`, `embeddingsIndex`) et leurs triggers associés. Les indices sont créés sur `goblin`, `timestamp`, `type`, `commitId` et `rowid` (index couvrant explicite pour optimiser les requêtes de comptage).
 
-La version de schéma (`PRAGMA user_version`) est gérée via un mécanisme de migration incrémentale jusqu'à la version 11.
+La version de schéma (`PRAGMA user_version`) est gérée via un mécanisme de migration incrémentale jusqu'à la version 12.
 
 #### Workers Piscina
 
