@@ -22,7 +22,7 @@ Le module `xcraft-core-cryo` est organisé autour de plusieurs composants clés 
 - **`lib/index.js`** : Instance singleton de `Cryo` configurée via `xcraft-core-etc`
 - **`lib/soulSweeper.js`** : Utilitaire de nettoyage et d'optimisation des bases de données
 - **`lib/streamSQL.js`** : Classes `ReadableSQL` et `WritableSQL` pour le streaming de données SQLite
-- **`lib/streamPort.js`** : Classes `MessagePortReadable` et `MessagePortWritable` pour le streaming inter-threads via MessageChannel
+- **`lib/streamPort.js`** : Classes `MessagePortReadable` et `MessagePortWritable` pour le streaming inter-threads via MessageChannel, avec surveillance (watchdog) configurable
 - **`lib/sqlite-vec/loader.js`** : Chargement de l'extension SQLite pour la recherche vectorielle
 - **`lib/endpoints/googleQueue.js`** : Endpoint optionnel pour publier les actions dans Google Cloud Pub/Sub
 - **`lib/workers/insert.js`** : Worker thread dédié au peuplement FTS/VEC et au traitement des embeddings
@@ -63,9 +63,11 @@ Les actions sont stockées dans une table `actions` avec les colonnes suivantes 
 
 **Bootstrap** — Pour initialiser une base de données depuis un flux distant, `bootstrapActions` crée une base temporaire préfixée par un point (`.db`), la peuple via un stream, puis la renomme. Les actions locales en attente de synchronisation sont préservées lors de ce processus.
 
-**Nettoyage (SoulSweeper)** — Chaque base de données dispose d'un `SoulSweeper` dédié qui peut nettoyer les actions obsolètes selon deux stratégies : par nombre maximum de persists par goblin ou par date limite. La stratégie combinée `sweepForDays` applique les deux en séquence.
+**Nettoyage (SoulSweeper)** — Chaque base de données dispose d'un `SoulSweeper` dédié qui peut nettoyer les actions obsolètes selon deux stratégies : par nombre maximum de persists par goblin ou par date limite. La stratégie combinée `sweepForDays` applique les deux en séquence. Les commandes exposées `sweep` et `sweepByMaxCount` permettent de piloter ce nettoyage avec des paramètres personnalisables (nombre de jours et de persists à conserver).
 
 **Table temporelle** — Optionnellement activée via `enableTimetable`, une table `timetable` précalculée de 64 000 jours (depuis l'an 2000) permet des analyses chronologiques avancées.
+
+**Streaming inter-threads résilient** — Les flux de données entre le thread principal et les workers (via `MessageChannel`) sont surveillés par un watchdog dont le délai est configurable (`workers.streamPort.timeout`), ce qui permet de détecter un lecteur mort et de libérer les ressources associées.
 
 ### Flux de traitement des embeddings
 
@@ -196,11 +198,14 @@ async bootstrapDatabase(streamId, routingKey, count) {
 async cleanupDatabase() {
   const cryo = this.quest.getAPI('cryo');
 
-  // Stratégie combinée : max 10 persists récents + 1 persist si > 30 jours
+  // Stratégie combinée : max 10 persists récents (défaut) + 1 persist si > 30 jours (défaut)
   const changes = await cryo.sweep({ dbs: ['myDatabase'] });
   console.log(changes); // { myDatabase: 1234 }
 
-  // Ou garder seulement les 5 derniers persists par goblin
+  // Personnaliser le nombre de jours et le nombre maximum de persists conservés
+  await cryo.sweep({ dbs: ['myDatabase'], max: 5, days: 15 });
+
+  // Ou garder seulement les 5 derniers persists par goblin (sans contrainte de date)
   await cryo.sweepByMaxCount({ dbs: ['myDatabase'], max: 5 });
 }
 ```
@@ -254,29 +259,31 @@ async syncPersists() {
 - **[xcraft-core-utils]** : Utilisé pour les mutex (`locks.getMutex`) et utilitaires JS
 - **[xcraft-core-fs]** : Gestion des fichiers et répertoires (copie, suppression de bases SQLite)
 - **[xcraft-core-transport]** : Streaming des données via `Streamer` lors du bootstrap
-- **[xcraft-core-etc]** : Chargement de la configuration du module
+- **[xcraft-core-etc]** : Chargement de la configuration du module (y compris le délai du watchdog de `streamPort`)
 - **[xcraft-core-goblin]** : Les acteurs Goblin et Elf utilisent Cryo pour persister leur état via les commandes exposées sur le bus
 - **[xcraft-core-host]** : Fournit `appVersion`, `resourcesPath` et `getRoutingKey()`
+- **[xcraft-core-log]** : Utilisé par `SoulSweeper` pour journaliser les opérations de nettoyage
 - **@google-cloud/pubsub** : Dépendance optionnelle (peer) utilisée par l'endpoint `googleQueue`
 
 ## Configuration avancée
 
-| Option                       | Description                                                        | Type    | Valeur par défaut |
-| ---------------------------- | ------------------------------------------------------------------ | ------- | ----------------- |
-| `journal`                    | Mode journal SQLite (`journal` ou `WAL`)                           | String  | `"WAL"`           |
-| `endpoints`                  | Liste des endpoints à activer                                      | Array   | `[]`              |
-| `enableFTS`                  | Activer la recherche plein texte (FTS5)                            | Boolean | `false`           |
-| `enableVEC`                  | Activer la recherche vectorielle (nécessite `enableFTS`)           | Boolean | `false`           |
-| `fts.list`                   | Bases de données où activer FTS (toutes si vide)                   | Array   | `[]`              |
-| `vec.list`                   | Bases de données où activer VEC (toutes si vide)                   | Array   | `[]`              |
-| `vec.dimensions`             | Nombre de dimensions pour les embeddings                           | Number  | `4096`            |
-| `vec.vecFunc`                | Fonction de conversion vectorielle (`vec_f32` ou `vec_int8`)       | String  | `"vec_f32"`       |
-| `vec.defaultLocale`          | Locale par défaut pour le partitionnement des vecteurs             | String  | `"fr"`            |
-| `migrations.cleanings`       | Règles de nettoyage par nom de base (types de goblins à supprimer) | Object  | `null`            |
-| `enableTimetable`            | Activer la table de temps précalculée                              | Boolean | `false`           |
-| `googleQueue.topic`          | Topic Google Pub/Sub pour publier les messages                     | String  | `""`              |
-| `googleQueue.authFile`       | Chemin relatif vers le fichier d'authentification Google Cloud     | String  | `""`              |
-| `googleQueue.orderingPrefix` | Partie fixe de la clé d'ordonnancement des messages                | String  | `""`              |
+| Option                       | Description                                                                                                                    | Type    | Valeur par défaut |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------- | ----------------- |
+| `journal`                    | Mode journal SQLite (`journal` ou `WAL`)                                                                                       | String  | `"WAL"`           |
+| `endpoints`                  | Liste des endpoints à activer                                                                                                  | Array   | `[]`              |
+| `enableFTS`                  | Activer la recherche plein texte (FTS5)                                                                                        | Boolean | `false`           |
+| `enableVEC`                  | Activer la recherche vectorielle (nécessite `enableFTS`)                                                                       | Boolean | `false`           |
+| `fts.list`                   | Bases de données où activer FTS (toutes si vide)                                                                               | Array   | `[]`              |
+| `vec.list`                   | Bases de données où activer VEC (toutes si vide)                                                                               | Array   | `[]`              |
+| `vec.dimensions`             | Nombre de dimensions pour les embeddings                                                                                       | Number  | `4096`            |
+| `vec.vecFunc`                | Fonction de conversion vectorielle (`vec_f32` ou `vec_int8`)                                                                   | String  | `"vec_f32"`       |
+| `vec.defaultLocale`          | Locale par défaut pour le partitionnement des vecteurs                                                                         | String  | `"fr"`            |
+| `migrations.cleanings`       | Règles de nettoyage par nom de base (types de goblins à supprimer)                                                             | Object  | `null`            |
+| `enableTimetable`            | Activer la table de temps précalculée                                                                                          | Boolean | `false`           |
+| `workers.streamPort.timeout` | Délai (ms) du watchdog de backpressure avant destruction d'un stream de type `MessagePortWritable` faute de demande du lecteur | Number  | `120000`          |
+| `googleQueue.topic`          | Topic Google Pub/Sub pour publier les messages                                                                                 | String  | `""`              |
+| `googleQueue.authFile`       | Chemin relatif vers le fichier d'authentification Google Cloud                                                                 | String  | `""`              |
+| `googleQueue.orderingPrefix` | Partie fixe de la clé d'ordonnancement des messages                                                                            | String  | `""`              |
 
 ### Variables d'environnement
 
@@ -373,9 +380,9 @@ Deux pools de workers sont gérés :
 
 - **`hasActions(resp, msg)`** — Vérifie que tous les goblins spécifiés ont au moins un persist.
 
-- **`sweep(resp, msg)`** — Lance `sweepForDays(30, 10)` sur les bases spécifiées (ou toutes). Retourne un objet `{[db]: changes}`.
+- **`sweep(resp, msg)`** — Lance `sweepForDays(days, max)` sur les bases spécifiées (ou toutes, via `getAllNames()` si `dbs` n'est pas fourni). Les paramètres `max` (défaut `10`) et `days` (défaut `30`) sont désormais configurables via `msg.data`. Retourne un objet `{[db]: changes}`.
 
-- **`sweepByMaxCount(resp, msg)`** — Lance `sweepByCount(max)` sur les bases spécifiées.
+- **`sweepByMaxCount(resp, msg)`** — Lance `sweepByCount(max)` sur les bases spécifiées (ou toutes).
 
 - **`refreshEmbeddings(resp, msg)`** — Retraite les embeddings obsolètes sur les bases VEC activées via le worker `refreshEmbeddings`.
 
@@ -393,7 +400,7 @@ Le paramètre `withCommits` (défaut `true`) contrôle si le nettoyage se limite
 
 #### Méthodes publiques
 
-- **`sweepByCount(count=4, dryrun=true)`** — Garde les `count` derniers persists par goblin (entre 1 et 100), supprime tous ceux en dessous du seuil ainsi que leurs actions intermédiaires. Lance un `ANALYZE` avant et un `VACUUM` si plus de 100 000 lignes sont supprimées.
+- **`sweepByCount(count=4, dryrun=true)`** — Garde les `count` derniers persists par goblin (entre 1 et 100), supprime tous ceux en dessous du seuil ainsi que leurs actions intermédiaires. Lance un `ANALYZE` avant et un `VACUUM` si plus de 100 000 lignes sont supprimées. Lève une erreur si `count` est en dehors de la plage `[1, 100]`.
 
 - **`sweepByDatetime(datetime=now, dryrun=true)`** — Supprime les actions dont le timestamp est antérieur à `datetime`, en gardant au minimum les 2 derniers persists par goblin.
 
@@ -409,7 +416,7 @@ Le mode `dryrun=true` (défaut) calcule le nombre de lignes qui seraient supprim
 
 ### `lib/streamPort.js` — Streaming via MessageChannel
 
-**`MessagePortWritable`** — Stream inscriptible qui envoie les chunks via un `MessagePort`. Implémente un protocole de back-pressure : le lecteur envoie un message vide pour signaler sa demande, et le writer attend cette demande avant d'envoyer. Tente le transfert zero-copy (`Transferable`) et bascule en copie en cas d'échec. Un watchdog détecte les lecteurs morts (60 secondes sans demande).
+**`MessagePortWritable`** — Stream inscriptible qui envoie les chunks via un `MessagePort`. Implémente un protocole de back-pressure : le lecteur envoie un message vide pour signaler sa demande, et le writer attend cette demande avant d'envoyer. Tente le transfert zero-copy (`Transferable`) et bascule en copie en cas d'échec. Un watchdog détecte les lecteurs morts après un délai d'inactivité configurable via l'option `workers.streamPort.timeout` (chargée depuis la configuration `xcraft-core-cryo`, défaut `120000` ms), et détruit alors le stream avec une `WriterTimeoutError`.
 
 **`MessagePortReadable`** — Stream lisible qui reçoit les chunks depuis un `MessagePort` et les pousse dans le flux Node.js. Envoie une demande initiale au writer, puis une nouvelle demande à chaque `_read()`. Gère la terminaison propre du port.
 
@@ -469,7 +476,10 @@ Worker thread Piscina exposant deux tâches pour la récupération en lecture se
 
 ### Fichiers de tests
 
-**`test/soulSweeper.spec.js`** — Suite de tests pour `SoulSweeper` avec Mocha/Chai. Contient des tests unitaires sur base SQLite en mémoire (toujours actifs) et des tests d'intégration sur une vraie base `cms.db` (désactivés par défaut avec `describe.skip`, nécessitent une extraction manuelle du fichier compressé).
+**`test/soulSweeper.spec.js`** — Suite de tests pour `SoulSweeper` avec Mocha/Chai, organisée en deux blocs :
+
+- Un bloc d'intégration (`describe.skip`, désactivé par défaut) qui valide `sweepByCount`, `sweepByDatetime` et une stratégie combinée sur une base réelle `cms.db` (nécessite une extraction manuelle du fichier compressé).
+- Un bloc de tests unitaires (toujours actif) sur une base SQLite en mémoire, couvrant : la conservation des `count` derniers persists par goblin, la préservation des actions intermédiaires entre persists conservés, le comportement de l'option `withCommits` (permettant ou non de nettoyer les persists sans `commitId`), la validation des bornes de `count` (erreurs en dehors de `[1, 100]`), le cas d'une base vide, et le cas d'un goblin ayant moins de persists que le seuil demandé.
 
 ## Licence
 
@@ -484,5 +494,6 @@ Ce module est distribué sous [licence MIT](./LICENSE).
 [xcraft-core-etc]: https://github.com/Xcraft-Inc/xcraft-core-etc
 [xcraft-core-goblin]: https://github.com/Xcraft-Inc/xcraft-core-goblin
 [xcraft-core-host]: https://github.com/Xcraft-Inc/xcraft-core-host
+[xcraft-core-log]: https://github.com/Xcraft-Inc/xcraft-core-log
 
 _Ce contenu a été généré par IA_
