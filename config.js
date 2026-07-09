@@ -55,7 +55,7 @@ module.exports = [
     default: 'vec_f32',
   },
   {
-    type: 'confirm',
+    type: 'input',
     name: 'vec.defaultLocale',
     message: 'used for vectors partionning',
     default: 'fr',
@@ -73,7 +73,7 @@ module.exports = [
     default: false,
   },
   {
-    type: 'confirm',
+    type: 'input',
     name: 'workers.streamPort.timeout',
     message: 'Default streamPort backpressure timeout',
     default: 120000,
