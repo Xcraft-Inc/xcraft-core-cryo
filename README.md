@@ -2,7 +2,7 @@
 
 ## Aperçu
 
-Le module `xcraft-core-cryo` est une couche de persistance sophistiquée pour l'écosystème Xcraft, basée sur SQLite. Il implémente un système d'event sourcing qui permet de sauvegarder, récupérer et gérer l'historique des mutations d'état des acteurs Goblin et Elf. Ce module est fondamental pour la persistance des données dans les applications Xcraft, offrant des fonctionnalités avancées comme la recherche plein texte (FTS), la recherche vectorielle (VEC), la synchronisation distribuée et le nettoyage automatique des données obsolètes.
+Le module `xcraft-core-cryo` est une couche de persistance sophistiquée pour l'écosystème Xcraft, basée sur SQLite. Il implémente un système d'event sourcing qui permet de sauvegarder, récupérer et gérer l'historique des mutations d'état des acteurs Goblin et Elf. Ce module est fondamental pour la persistance des données dans les applications Xcraft, offrant des fonctionnalités avancées comme la recherche plein texte (FTS), la recherche vectorielle (VEC) avec migration automatique des dimensions, la synchronisation distribuée et le nettoyage automatique des données obsolètes.
 
 ## Sommaire
 
@@ -55,6 +55,8 @@ Les actions sont stockées dans une table `actions` avec les colonnes suivantes 
 
 **Recherche vectorielle (VEC)** — Quand `enableVEC` est activé (nécessite `enableFTS`), une table virtuelle `embeddings` (via `sqlite-vec`) stocke les embeddings de chaque document partitionnés par locale. Le traitement des embeddings est délégué à un worker thread Piscina pour éviter de bloquer le thread principal. Un index `embeddingsIndex` associe chaque document à la ligne de son action persist la plus récente.
 
+À chaque ouverture d'une base avec VEC activé, Cryo inspecte le SQL de la table `embeddings` existante et en extrait le type et la dimension du vecteur (`embedding FLOAT[N]` ou `embedding int8[N]`) par une expression régulière. Si la dimension ou le type configuré (`vec.dimensions`, `vec.vecFunc`) diffère de celui déjà présent en base, la table `embeddings` est automatiquement supprimée puis recréée avec la nouvelle définition — une migration transparente lors d'un changement de modèle d'embeddings. Cryo enregistre également, pour les bases persistantes (non préfixées par un point), des triggers automatiques sur l'actorType `indexedContent` afin de déclencher le worker d'embedding (`<worker-vec-embed>`) à chaque insertion ou mise à jour.
+
 **Transactions et verrous** — Les transactions sont gérées avec un mutex par base de données (`_syncLock`) pour garantir la cohérence des accès concurrents. Les notifications déclenchées par les triggers FTS sont mises en file d'attente pendant une transaction et envoyées après le `commit`.
 
 **Middleware de transformation** — Un mécanisme de middleware chainé permet de transformer les lignes lors de la récupération (`thaw`). Un middleware peut diviser une action en plusieurs actions ou la supprimer. Cela est utile pour les migrations de modèles de données.
@@ -72,7 +74,7 @@ Les actions sont stockées dans une table `actions` avec les colonnes suivantes 
 ### Flux de traitement des embeddings
 
 ```
-Action persist insérée
+Action persist insérée (goblin de type indexedContent)
     → Trigger SQL onInsert/onUpdate sur lastPersistedActions
     → Notification sur topic <worker-vec-embed>
     → Souscription resp.events → Piscina.run({name: 'embed'})
@@ -275,7 +277,7 @@ async syncPersists() {
 | `enableVEC`                  | Activer la recherche vectorielle (nécessite `enableFTS`)                                                                       | Boolean | `false`           |
 | `fts.list`                   | Bases de données où activer FTS (toutes si vide)                                                                               | Array   | `[]`              |
 | `vec.list`                   | Bases de données où activer VEC (toutes si vide)                                                                               | Array   | `[]`              |
-| `vec.dimensions`             | Nombre de dimensions pour les embeddings                                                                                       | Number  | `4096`            |
+| `vec.dimensions`             | Nombre de dimensions pour les embeddings (une modification déclenche une recréation automatique de la table `embeddings`)      | Number  | `4096`            |
 | `vec.vecFunc`                | Fonction de conversion vectorielle (`vec_f32` ou `vec_int8`)                                                                   | String  | `"vec_f32"`       |
 | `vec.defaultLocale`          | Locale par défaut pour le partitionnement des vecteurs                                                                         | String  | `"fr"`            |
 | `migrations.cleanings`       | Règles de nettoyage par nom de base (types de goblins à supprimer)                                                             | Object  | `null`            |
@@ -309,7 +311,7 @@ La classe `Cryo` hérite de `SQLite` ([xcraft-core-book]) et constitue le cœur 
 
 Le constructeur détermine le répertoire de stockage (`xcraft.xcraftRoot/var/cryo` par défaut), charge la configuration et prépare toutes les requêtes SQL préparées. Selon la configuration, il génère les DDL pour les tables optionnelles (`timetable`, `lastPersistedActions`, `fts_idx`, `embeddings`, `embeddingsIndex`) et leurs triggers associés. Les indices sont créés sur `goblin`, `timestamp`, `type`, `commitId` et `rowid` (index couvrant explicite pour optimiser les requêtes de comptage).
 
-La version de schéma (`PRAGMA user_version`) est gérée via un mécanisme de migration incrémentale jusqu'à la version 12.
+La version de schéma (`PRAGMA user_version`) est gérée via un mécanisme de migration incrémentale jusqu'à la version 12. À chaque ouverture, si VEC est activé, Cryo compare également la dimension et le type de vecteur configurés à ceux réellement présents dans le schéma SQL de la table `embeddings` : en cas de divergence, la table est supprimée et recréée avec la nouvelle définition (migration automatique de dimension d'embedding).
 
 #### Workers Piscina
 
@@ -342,7 +344,7 @@ Deux pools de workers sont gérés :
 
 - **`dump(resp, msg)`** — Exporte les dernières actions par goblin jusqu'à un timestamp vers une base de données distincte via `ATTACH DATABASE`.
 
-- **`registerLastActionTriggers(resp, msg)`** — Enregistre des topics d'événements déclenchés par les triggers FTS lors des insertions, mises à jour ou suppressions dans `lastPersistedActions`. Nécessite `enableFTS`.
+- **`registerLastActionTriggers(resp, msg)`** — Enregistre des topics d'événements déclenchés par les triggers FTS lors des insertions, mises à jour ou suppressions dans `lastPersistedActions`. Nécessite `enableFTS`. Utilisé en interne pour l'actorType `indexedContent` lorsque VEC est activé.
 
 - **`unregisterLastActionTriggers(resp, msg)`** — Retire des topics précédemment enregistrés.
 
@@ -380,7 +382,7 @@ Deux pools de workers sont gérés :
 
 - **`hasActions(resp, msg)`** — Vérifie que tous les goblins spécifiés ont au moins un persist.
 
-- **`sweep(resp, msg)`** — Lance `sweepForDays(days, max)` sur les bases spécifiées (ou toutes, via `getAllNames()` si `dbs` n'est pas fourni). Les paramètres `max` (défaut `10`) et `days` (défaut `30`) sont désormais configurables via `msg.data`. Retourne un objet `{[db]: changes}`.
+- **`sweep(resp, msg)`** — Lance `sweepForDays(days, max)` sur les bases spécifiées (ou toutes, via `getAllNames()` si `dbs` n'est pas fourni). Les paramètres `max` (défaut `10`) et `days` (défaut `30`) sont configurables via `msg.data`. Retourne un objet `{[db]: changes}`.
 
 - **`sweepByMaxCount(resp, msg)`** — Lance `sweepByCount(max)` sur les bases spécifiées (ou toutes).
 
