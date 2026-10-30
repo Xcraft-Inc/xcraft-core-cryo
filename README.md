@@ -23,7 +23,7 @@ Le module `xcraft-core-cryo` est organisé autour de plusieurs composants clés 
 - **`lib/soulSweeper.js`** : Utilitaire de nettoyage et d'optimisation des bases de données
 - **`lib/streamSQL.js`** : Classes `ReadableSQL` et `WritableSQL` pour le streaming de données SQLite
 - **`lib/streamPort.js`** : Classes `MessagePortReadable` et `MessagePortWritable` pour le streaming inter-threads via MessageChannel, avec surveillance (watchdog) configurable
-- **`lib/sqlite-vec/loader.js`** : Chargement de l'extension SQLite pour la recherche vectorielle
+- **`lib/sqlite-vector/loader.js`** : Chargement de l'extension SQLite pour la recherche vectorielle
 - **`lib/endpoints/googleQueue.js`** : Endpoint optionnel pour publier les actions dans Google Cloud Pub/Sub
 - **`lib/workers/insert.js`** : Worker thread dédié au peuplement FTS/VEC et au traitement des embeddings
 - **`lib/workers/retrieve.js`** : Worker thread dédié à la récupération streamée des actions persist
@@ -53,9 +53,7 @@ Les actions sont stockées dans une table `actions` avec les colonnes suivantes 
 
 **Recherche plein texte (FTS5)** — Quand `enableFTS` est activé, une table `lastPersistedActions` maintient la dernière action persist par goblin (hors statut `trashed`). Une table virtuelle `fts_idx` indexe le champ `meta.index` de chaque état. Des triggers SQLite maintiennent automatiquement cet index et peuvent déclencher des notifications via des topics configurables.
 
-**Recherche vectorielle (VEC)** — Quand `enableVEC` est activé (nécessite `enableFTS`), une table virtuelle `embeddings` (via `sqlite-vec`) stocke les embeddings de chaque document partitionnés par locale. Le traitement des embeddings est délégué à un worker thread Piscina pour éviter de bloquer le thread principal. Un index `embeddingsIndex` associe chaque document à la ligne de son action persist la plus récente.
-
-À chaque ouverture d'une base avec VEC activé, Cryo inspecte le SQL de la table `embeddings` existante et en extrait le type et la dimension du vecteur (`embedding FLOAT[N]` ou `embedding int8[N]`) par une expression régulière. Si la dimension ou le type configuré (`vec.dimensions`, `vec.vecFunc`) diffère de celui déjà présent en base, la table `embeddings` est automatiquement supprimée puis recréée avec la nouvelle définition — une migration transparente lors d'un changement de modèle d'embeddings. Cryo enregistre également, pour les bases persistantes (non préfixées par un point), des triggers automatiques sur l'actorType `indexedContent` afin de déclencher le worker d'embedding (`<worker-vec-embed>`) à chaque insertion ou mise à jour.
+**Recherche vectorielle (VEC)** — Quand `enableVEC` est activé (nécessite `enableFTS`), une table SQLite ordinaire `embeddings` stocke les embeddings de chaque document. L'extension `sqlite-vector` fournit la recherche par distance cosinus. Le traitement des embeddings est délégué à un worker thread Piscina pour éviter de bloquer le thread principal. Un index `embeddingsIndex` associe chaque document à la ligne de son action persist la plus récente. Pour les bases persistantes (non préfixées par un point), Cryo enregistre des triggers automatiques sur l'actorType `indexedContent` afin de déclencher le worker d'embedding (`<worker-vec-embed>`) à chaque insertion ou mise à jour.
 
 **Transactions et verrous** — Les transactions sont gérées avec un mutex par base de données (`_syncLock`) pour garantir la cohérence des accès concurrents. Les notifications déclenchées par les triggers FTS sont mises en file d'attente pendant une transaction et envoyées après le `commit`.
 
@@ -434,9 +432,9 @@ Endpoint optionnel activé en ajoutant `"googleQueue"` à la liste `endpoints` d
 
 - **`freeze(resp, msg, results)`** — Publie l'action dans Pub/Sub avec les attributs `origin`, `publish_timestamp`, `timestamp`, `goblin` et `version`. Utilise la clé d'ordonnancement configurée et active `enableMessageOrdering` sur le topic.
 
-### `lib/sqlite-vec/loader.js` — Extension vectorielle SQLite
+### `lib/sqlite-vector/loader.js` — Extension vectorielle SQLite
 
-Module utilitaire qui charge l'extension native `sqlite-vec` (`vec0`) dans une instance de base de données SQLite. Supporte les plateformes Linux, macOS et Windows en architecture x86_64 et aarch64. Gère le chemin `app.asar.unpacked` pour les applications Electron packagées.
+Module utilitaire qui charge l'extension native `sqlite-vector` dans une instance de base de données SQLite. Il utilise le chemin fourni par le paquet officiel et gère `app.asar.unpacked` pour les applications Electron packagées.
 
 #### Méthodes publiques
 
@@ -447,26 +445,27 @@ Module utilitaire qui charge l'extension native `sqlite-vec` (`vec0`) dans une i
 
 Worker thread Piscina exposant trois tâches :
 
-**`populate({db, location, enableFTS, enableVEC, defaultLocale, indices, vecFunc})`** — Exécuté après un bootstrap ou une migration. Peuple `fts_idx` depuis `lastPersistedActions` si FTS est activé, et peuple `embeddings` + `embeddingsIndex` depuis les dernières actions persist si VEC est activé. Applique ensuite les indices personnalisés et exécute `ANALYZE`.
+**`populate({db, location, enableFTS, enableVEC, defaultLocale, indices, dimensions, vecFunc})`** — Exécuté après un bootstrap ou une migration. Peuple `fts_idx` depuis `lastPersistedActions` si FTS est activé, et peuple `embeddings` + `embeddingsIndex` depuis les dernières actions persist si VEC est activé. Applique ensuite les indices personnalisés et exécute `ANALYZE`.
 
-**`embed({db, location, goblin, defaultLocale, vecFunc})`** — Exécuté à chaque modification d'une entité `indexedContent` (déclenchée par les triggers FTS). Supprime les embeddings existants pour le `documentId` et les réinsère depuis la dernière action persist du goblin. Opère dans une transaction `IMMEDIATE`.
+**`embed({db, location, goblin, defaultLocale, dimensions, vecFunc})`** — Exécuté à chaque modification d'une entité `indexedContent` (déclenchée par les triggers FTS). Supprime les embeddings existants pour le `documentId` et les réinsère depuis la dernière action persist du goblin. Opère dans une transaction `IMMEDIATE`.
 
-**`refreshEmbeddings({db, location, defaultLocale, vecFunc})`** — Détecte les embeddings obsolètes (ceux dont le `documentRowid` dans `embeddingsIndex` ne correspond plus au `max(rowid)` de l'action persist courante), les supprime et les réinsère. Utile après une synchronisation ou un import de données.
+**`refreshEmbeddings({db, location, defaultLocale, dimensions, vecFunc})`** — Détecte les embeddings obsolètes (ceux dont le `documentRowid` dans `embeddingsIndex` ne correspond plus au `max(rowid)` de l'action persist courante), les supprime et les réinsère. Utile après une synchronisation ou un import de données.
 
 La table `embeddings` utilise la structure suivante :
 
 ```sql
-CREATE VIRTUAL TABLE embeddings USING vec0(
-  locale TEXT partition key,
+CREATE TABLE embeddings (
+  rowid INTEGER PRIMARY KEY,
+  locale TEXT NOT NULL,
   scope TEXT,
   documentId TEXT,
-  +chunkId TEXT,
-  +chunk TEXT,
-  embedding FLOAT[dimensions] distance_metric=cosine
+  chunkId TEXT,
+  chunk TEXT,
+  embedding BLOB NOT NULL
 );
 ```
 
-Le partitionnement par `locale` permet des recherches vectorielles ciblées par langue. La métrique de distance cosinus est utilisée pour la similarité sémantique.
+La table est initialisée avec la dimension, le type et la métrique cosinus configurés avant les recherches vectorielles.
 
 ### `lib/workers/retrieve.js` — Worker de récupération streamée
 
