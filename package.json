@@ -20,7 +20,7 @@
     }
   },
   "dependencies": {
-    "@sqliteai/sqlite-vector": "1.1.2",
+    "@sqliteai/sqlite-vector": "^1.2.0",
     "fs-extra": "^11.3.0",
     "gigawatts": "^4.0.1",
     "piscina": "^5.1.2",
