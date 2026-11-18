@@ -25,7 +25,6 @@ describe('xcraft.cryo.vector', function () {
           scope TEXT,
           documentId TEXT,
           chunkId TEXT,
-          chunk TEXT,
           embedding BLOB NOT NULL
         );
 
@@ -44,16 +43,15 @@ describe('xcraft.cryo.vector', function () {
 
     const insert = db.prepare(`
       INSERT INTO embeddings
-        (locale, scope, documentId, chunkId, chunk, embedding)
+        (locale, scope, documentId, chunkId, embedding)
       VALUES
-        ($locale, $scope, $documentId, $chunkId, $chunk, $embedding)
+        ($locale, $scope, $documentId, $chunkId, $embedding)
     `);
     insert.run({
       locale: 'fr',
       scope: 'web',
       documentId: 'same',
       chunkId: 'title',
-      chunk: 'Same direction',
       embedding: vector([1, 0, 0]),
     });
     insert.run({
@@ -61,7 +59,6 @@ describe('xcraft.cryo.vector', function () {
       scope: 'web',
       documentId: 'orthogonal',
       chunkId: 'title',
-      chunk: 'Orthogonal direction',
       embedding: vector([0, 1, 0]),
     });
     insert.run({
@@ -69,7 +66,6 @@ describe('xcraft.cryo.vector', function () {
       scope: 'internal',
       documentId: 'opposite',
       chunkId: 'title',
-      chunk: 'Opposite direction',
       embedding: vector([-1, 0, 0]),
     });
   });
@@ -85,6 +81,7 @@ describe('xcraft.cryo.vector', function () {
 
     expect(sql).to.include('CREATE TABLE embeddings');
     expect(sql).not.to.include('CREATE VIRTUAL TABLE');
+    expect(sql).not.to.include('chunk TEXT');
   });
 
   it('returns nearest embeddings ordered by cosine distance', function () {
