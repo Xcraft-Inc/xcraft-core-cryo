@@ -1,0 +1,12 @@
+[
+  {
+    "SourceBranch": "wip/ms@checkpoint",
+    "TargetBranch": "master",
+    "CreateMergeRequest": false,
+    "CreatedAt": "2026-11-20T08:01:49.6159514+01:00",
+    "Author": "Mathieu Schroeter <mathieu@schroetersa.ch>",
+    "TargetSha": "96f2b0523dda585130a94bbf7bf093f46d14854e",
+    "Orphan": false,
+    "BundleName": "yeti"
+  }
+]
